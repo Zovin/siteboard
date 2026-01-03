@@ -11,6 +11,10 @@ export default function Canvas() {
 
     const spacingRef = useRef(50);
 
+    const zoomRef = useRef(1);
+    const minZoom = 0.5;
+    const maxZoom = 6;
+
     // for pointer movement / grid movement
     const moveGridEnabledRef = useRef(false);
     const lastMousePositionRef = useRef<Point>(null);
@@ -21,35 +25,41 @@ export default function Canvas() {
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-
         
         const size = canvas.getBoundingClientRect();
-        console.log(size);
         canvas.width = Math.round(size.width);
         canvas.height = Math.round(size.height);
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const startX = curPosRef.current.x;
-        const startY = curPosRef.current.y;
+        const worldX = curPosRef.current.x;
+        const worldY = curPosRef.current.y;
+
+        const zoom = zoomRef.current;
 
         const spacing = spacingRef.current;
+        const zoomSpacing = spacingRef.current * zoom;
 
-        let x = (Math.ceil(startX / spacing) * spacing) - startX;
-        let y = (Math.ceil(startY / spacing) * spacing) - startY;
-        const endX = x + canvas.width;
-        const endY = y + canvas.height;
+        const worldFirstX = Math.ceil(worldX / spacing) * spacing;  // gets the 
+        const worldFirstY = Math.ceil(worldY / spacing) * spacing;
+
+        let x = (worldFirstX - worldX) * zoom;
+        let y = (worldFirstY - worldY) * zoom;
+        const endX = canvas.width;
+        const endY = canvas.height;
+
+        ctx.beginPath()
 
         while (x < endX) {
             ctx.moveTo(x,0);
             ctx.lineTo(x, endY);
-            x += spacing;
+            x += zoomSpacing;
         }
 
         while (y < endY) {
             ctx.moveTo(0, y);
             ctx.lineTo(endX, y);
-            y += spacing;
+            y += zoomSpacing;
         }
 
         ctx.strokeStyle = "#e0e0e0";
@@ -71,8 +81,10 @@ export default function Canvas() {
         const dy = e.clientY - lastMousePositionRef.current.y;
         lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
 
-        curPosRef.current.x -= dx;
-        curPosRef.current.y -= dy;
+        const zoom = zoomRef.current;
+
+        curPosRef.current.x -= dx / zoom;
+        curPosRef.current.y -= dy / zoom;
 
         draw();
 
@@ -81,6 +93,38 @@ export default function Canvas() {
     const onMouseUp = () => {
         moveGridEnabledRef.current = false;
         if (canvasRef.current) canvasRef.current.style.cursor = "default";
+    }
+
+    const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+        e.preventDefault(); // prevent scrolling down
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const canvasLocation = canvas.getBoundingClientRect();
+        // current location of the mouse relative to the screen
+        const mouseX = e.clientX - canvasLocation.left;
+        const mouseY = e.clientY - canvasLocation.top;
+
+        const oldZoom = zoomRef.current;
+
+        const worldMouseX = curPosRef.current.x + mouseX / oldZoom;
+        const worldMouseY = curPosRef.current.y + mouseY / oldZoom;
+
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;    // zoom in or zoom out by 10% every time, not a flat number
+        let newZoom = oldZoom * zoomFactor;
+        newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom)); // limit the zoom to either minZoom or maxZoom
+
+        // when zooming, we want the mouseX and mouseY value to still be the same, so we change the camera location instead.
+        // (if the camera zooms in, we want to move the camera's world x postion to be closer to the mouse pointer and vice versa)
+        // currently CameraX = worldMouseX - mouseX/oldZoom, so to get the cameraX with new zoom, we do
+        // CameraX = worldMouseX - mouseX/newZoom
+        curPosRef.current.x = worldMouseX - mouseX / newZoom;
+        curPosRef.current.y = worldMouseY - mouseY / newZoom;
+
+        zoomRef.current = newZoom;
+
+        draw();
     }
 
     useEffect(() => {
@@ -95,6 +139,7 @@ export default function Canvas() {
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
         onMouseMove={onMouseMove}
+        onWheel={onWheel}
         />
     </div>
   );
