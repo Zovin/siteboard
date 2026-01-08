@@ -23,3 +23,9 @@ html, body {
   padding: 0;
   height: 100%;
 }
+
+.grid-layer,
+.items-layer {
+  position: absolute;
+  inset: 0;
+}

@@ -1,13 +1,21 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Point = {
   x: number;
   y: number;
 };
 
+type Item = {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    z: number;
+}
+
 export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const curPosRef = useRef<Point>({x: 5000, y: 40});
+    const curPosRef = useRef<Point>({x: 0, y: 0});
 
     const spacingRef = useRef(50);
 
@@ -18,6 +26,23 @@ export default function Canvas() {
     // for pointer movement / grid movement
     const moveGridEnabledRef = useRef(false);
     const lastMousePositionRef = useRef<Point>(null);
+
+    // using state since we want to reload everytime we add an item
+    const [items, setItems] = useState<Item[]>([]); 
+
+    const z = useRef(1);
+    const itemsLayerRef = useRef<HTMLDivElement>(null);
+
+    const transformItems = () => {
+        const itemsLayer = itemsLayerRef.current;
+        if (!itemsLayer) return;
+
+        const zoom = zoomRef.current;
+        const cameraX = curPosRef.current.x;
+        const cameraY = curPosRef.current.y;
+
+        itemsLayer.style.transform = `scale(${zoom}) translate(${-cameraX}px, ${-cameraY}px)`;
+    };
 
     const draw = () => {
         const canvas = canvasRef.current;
@@ -47,6 +72,7 @@ export default function Canvas() {
         let y = (worldFirstY - worldY) * zoom;
         const endX = canvas.width;
         const endY = canvas.height;
+
 
         ctx.beginPath()
 
@@ -87,7 +113,7 @@ export default function Canvas() {
         curPosRef.current.y -= dy / zoom;
 
         draw();
-
+        transformItems();
     }
 
     const onMouseUp = () => {
@@ -117,7 +143,8 @@ export default function Canvas() {
 
         // when zooming, we want the mouseX and mouseY value to still be the same, so we change the camera location instead.
         // (if the camera zooms in, we want to move the camera's world x postion to be closer to the mouse pointer and vice versa)
-        // currently CameraX = worldMouseX - mouseX/oldZoom, so to get the cameraX with new zoom, we do
+        // currently CameraX = worldMouseX - mouseX/oldZoom(this gives the real distance of the mouse to left corner), 
+        // so to get the cameraX with new zoom, we do
         // CameraX = worldMouseX - mouseX/newZoom
         curPosRef.current.x = worldMouseX - mouseX / newZoom;
         curPosRef.current.y = worldMouseY - mouseY / newZoom;
@@ -125,6 +152,36 @@ export default function Canvas() {
         zoomRef.current = newZoom;
 
         draw();
+        transformItems();
+
+    }
+
+    const onDoubleClick = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        console.log("add item")
+
+        const canvasLocation = canvas.getBoundingClientRect();
+
+        const mouseX = e.clientX - canvasLocation.left;
+        const mouseY = e.clientY - canvasLocation.top;
+
+        const CameraLocation = curPosRef.current;
+        const itemWorldX = CameraLocation.x + mouseX / zoomRef.current;
+        const itemWorldY = CameraLocation.y + mouseY / zoomRef.current;
+
+        setItems([...items, {
+            x: itemWorldX,
+            y: itemWorldY,
+            w: 100,
+            h: 100,
+            z: z.current,
+        }])
+
+        console.log(items);
+
+        z.current += 1;
     }
 
     useEffect(() => {
@@ -132,15 +189,37 @@ export default function Canvas() {
     }, []);
 
   return (
-    <div style={{ width: "100%", height: "100vh", display: "block" }}>
+    <div style={{ width: "100%", height: "100vh", display: "block", overflow: "hidden", position: "relative",  }}>
         <canvas 
-        ref={canvasRef} 
-        style={{ width: "100%", height: "100%", display: "block"}}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseMove={onMouseMove}
-        onWheel={onWheel}
+            ref={canvasRef} 
+            style={{ width: "100%", height: "100%", display: "block", position: "absolute",}}
+            onMouseDown={onMouseDown}
+            onMouseUp={onMouseUp}
+            onMouseMove={onMouseMove}
+            onWheel={onWheel}
+            onDoubleClick={onDoubleClick}
         />
+        <div
+            ref = {itemsLayerRef}
+            style={{
+                position: "absolute",
+                transformOrigin: "top left",
+                zIndex: 1,
+            }}
+        >
+            {items.map(item => {
+                return (
+                    <div key={item.z} style={{ 
+                        width: item.w,
+                        height: item.h,
+                        left: item.x,
+                        top: item.y,
+                        background: "red",
+                        position: "absolute"
+                    }}/>
+                )
+            })}
+        </div>
     </div>
   );
 }
