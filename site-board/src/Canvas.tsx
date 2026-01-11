@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import type { Item } from "./types/item";
+import { Card } from "./components/Card";
 
 type Point = {
   x: number;
   y: number;
 };
 
-type Item = {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    z: number;
-}
 
 export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,6 +27,8 @@ export default function Canvas() {
 
     const z = useRef(1);
     const itemsLayerRef = useRef<HTMLDivElement>(null);
+
+    const cardIdCounter = useRef<number>(0);
 
     const transformItems = () => {
         const itemsLayer = itemsLayerRef.current;
@@ -177,11 +174,22 @@ export default function Canvas() {
             w: 100,
             h: 100,
             z: z.current,
+            id: cardIdCounter.current,
+
+            type: "input",
+            value: ""
         }])
 
         console.log(items);
 
         z.current += 1;
+        cardIdCounter.current += 1;
+    }
+
+    const updateCard = (updatedCard: Item) => {
+        setItems((items) => 
+            items.map((item) => item.id == updatedCard.id ? updatedCard : item)
+        );
     }
 
     useEffect(() => {
@@ -207,18 +215,13 @@ export default function Canvas() {
                 zIndex: 1,
             }}
         >
-            {items.map(item => {
-                return (
-                    <div key={item.z} style={{ 
-                        width: item.w,
-                        height: item.h,
-                        left: item.x,
-                        top: item.y,
-                        background: "red",
-                        position: "absolute"
-                    }}/>
-                )
-            })}
+            {items.map(item => (
+                <Card
+                    key={item.id}
+                    card={item}
+                    onUpdate={updateCard}
+                />
+            ))}
         </div>
     </div>
   );
