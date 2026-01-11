@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { Item } from "./types/item";
+import type { Item, Point } from "./types/item";
 import { Card } from "./components/Card";
-
-type Point = {
-  x: number;
-  y: number;
-};
-
 
 export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +34,10 @@ export default function Canvas() {
 
         itemsLayer.style.transform = `scale(${zoom}) translate(${-cameraX}px, ${-cameraY}px)`;
     };
+
+    const getZoom = () => {
+        return zoomRef.current;
+    }
 
     const draw = () => {
         const canvas = canvasRef.current;
@@ -220,6 +218,7 @@ export default function Canvas() {
                     key={item.id}
                     card={item}
                     onUpdate={updateCard}
+                    getZoom={getZoom}
                 />
             ))}
         </div>

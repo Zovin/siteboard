@@ -11,4 +11,10 @@ export type Item = {
     value: string
 }
 
+export type Point = {
+  x: number;
+  y: number;
+};
+
+
 export type CardType = "input" | "iframe";
