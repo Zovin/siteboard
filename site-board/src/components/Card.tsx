@@ -11,8 +11,9 @@ export function Card({ card, onUpdate, getZoom }: Props) {
 
     const resizingRef = useRef<boolean>(false);
     const moveRef = useRef<boolean>(false);
-    const lastMousePositionRef = useRef<Point | null>(null);
+    const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
+    const totalMovementRef = useRef<Point>({ x: 0, y: 0 });
 
     function withHttps(url: string) {
         if (!/^https?:\/\//i.test(url)) {
@@ -79,6 +80,7 @@ export function Card({ card, onUpdate, getZoom }: Props) {
 
         lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
 
+
         const cardDiv = cardRef.current!;
         cardDiv.style.width = `${(cardDiv.offsetWidth + dx) * zoom}px`;
         cardDiv.style.height = `${(cardDiv.offsetHeight + dy) * zoom}px`;
@@ -111,7 +113,7 @@ export function Card({ card, onUpdate, getZoom }: Props) {
     }
 
     const movePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!moveRef.current || !lastMousePositionRef.current) return;
+        if (!moveRef.current || !lastMousePositionRef.current || !totalMovementRef.current) return;
 
         const zoom = getZoom();
 
@@ -119,31 +121,28 @@ export function Card({ card, onUpdate, getZoom }: Props) {
         const dy = (e.clientY - lastMousePositionRef.current.y) / zoom;
 
         lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
+        
+        totalMovementRef.current.x += dx;
+        totalMovementRef.current.y += dy;
 
         const cardDiv = cardRef.current!;
-        const style = getComputedStyle(cardDiv);
-        const left = parseFloat(style.left);
-        const top = parseFloat(style.top);
-
-        cardDiv.style.left = `${(left + dx) * zoom}px`;
-        cardDiv.style.top = `${(top + dy) * zoom}px`;
+        // cardDiv.style.left = `${(card.x + totalMovementRef.current.x) * zoom}px`;
+        // cardDiv.style.top = `${(card.y + totalMovementRef.current.y) * zoom}px`;
+        cardDiv.style.transform =
+            `translate(${totalMovementRef.current.x}px, ${totalMovementRef.current.y}px)`;
     }
 
     const movePointerUp = () => {
-        if (!moveRef.current || !cardRef.current) return;
-
+        if (!moveRef.current || !totalMovementRef.current) return;
         moveRef.current = false;
 
-        const cardDiv = cardRef.current;
-        const style = getComputedStyle(cardDiv);
-        const left = parseFloat(style.left);
-        const top = parseFloat(style.top);
+        const dx = totalMovementRef.current.x;
+        const dy = totalMovementRef.current.y;
 
-        onUpdate({
-            ...card,
-            x: left / getZoom(),
-            y: top / getZoom(),
-        })
+        const cardDiv = cardRef.current!;
+        onUpdate({ ...card, x: card.x + dx, y: card.y + dy });
+        cardDiv.style.transform = "translate(0px, 0px)";
+        totalMovementRef.current = { x: 0, y: 0};
     }
 
     return (
@@ -159,7 +158,8 @@ export function Card({ card, onUpdate, getZoom }: Props) {
                 border: "4px solid #aaa",
                 background: "#fff",
                 boxSizing: "border-box",
-                cursor: "all-scroll"
+                cursor: "all-scroll",
+                transform: "translate(0px, 0px)",
             }}
             onPointerDown={movePointerDown}
             onPointerMove={movePointerMove}

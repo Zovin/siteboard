@@ -10,7 +10,7 @@ export default function Canvas() {
 
     const zoomRef = useRef(1);
     const minZoom = 0.5;
-    const maxZoom = 6;
+    const maxZoom = 5;
 
     // for pointer movement / grid movement
     const moveGridEnabledRef = useRef(false);
@@ -155,7 +155,6 @@ export default function Canvas() {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        console.log("add item")
 
         const canvasLocation = canvas.getBoundingClientRect();
 
@@ -169,8 +168,8 @@ export default function Canvas() {
         setItems([...items, {
             x: itemWorldX,
             y: itemWorldY,
-            w: 100,
-            h: 100,
+            w: 200,
+            h: 40,
             z: z.current,
             id: cardIdCounter.current,
 
