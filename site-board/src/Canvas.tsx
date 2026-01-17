@@ -83,7 +83,7 @@ export default function Canvas() {
             y += zoomSpacing;
         }
 
-        ctx.strokeStyle = "#e0e0e0";
+        ctx.strokeStyle = "rgba(224, 224, 224, 0.5)";
         ctx.lineWidth = 1;
         ctx.stroke();
     }
@@ -189,6 +189,11 @@ export default function Canvas() {
         );
     }
 
+    const removeCard = (cardId: number) => {
+        const updatedCards = items.filter(c => c.id != cardId);
+        setItems(updatedCards);
+    }
+
     useEffect(() => {
         draw();
     }, []);
@@ -218,6 +223,7 @@ export default function Canvas() {
                     card={item}
                     onUpdate={updateCard}
                     getZoom={getZoom}
+                    removeCard={removeCard}
                 />
             ))}
         </div>

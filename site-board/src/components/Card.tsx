@@ -5,27 +5,39 @@ type Props = {
     card: Item;
     onUpdate: (card: Item) => void;
     getZoom: () => number;
+    removeCard: (cardId: number) => void;
 }
 
-export function Card({ card, onUpdate, getZoom }: Props) {
+export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
 
     const resizingRef = useRef<boolean>(false);
     const moveRef = useRef<boolean>(false);
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
-    const totalMovementRef = useRef<Point>({ x: 0, y: 0 });
 
-    function withHttps(url: string) {
+    const totalMovementRef = useRef<Point>({ x: 0, y: 0 });
+    const totalResizeRef = useRef({ w: 0, h: 0 });
+
+    const withHttps = (url: string) => {
         if (!/^https?:\/\//i.test(url)) {
             return "https://" + url;
         }   
         return url;
     }
 
+    const removeInputCard = () => {
+        if (card.type === "input") {
+            removeCard(card.id);
+        }
+    }
+
+    const removeCurrentCard = () => {
+        removeCard(card.id);
+    }
+
     let content;
 
-    // initial 
-    if (card.type == "input") {
+    if (card.type === "input") {
         content = (
             <input
                 autoFocus
@@ -33,14 +45,18 @@ export function Card({ card, onUpdate, getZoom }: Props) {
                 onChange={(e) => onUpdate({...card, value: e.target.value})}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" && card.value != "") {
-                        onUpdate({...card, type: "iframe"});
+                        onUpdate({...card, type: "iframe", w: 800, h: 600});
                     }
                 }}
+                onBlur={removeInputCard}
                 style={{ 
                     width: "100%",
                     height: "100%",
                     border: "none",
-                    outline: "none"
+                    outline: "none",
+                    background: "transparent",
+                    caretColor: "white",
+                    fontSize: "20px",
                 }}
             />
         )
@@ -55,11 +71,13 @@ export function Card({ card, onUpdate, getZoom }: Props) {
                     outline: "none",
                 }}
             />
-        )
+        );
     }
 
     const resizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.stopPropagation();
+
+        console.log(`resize starting mouse position = ${e.clientX} , ${e.clientY}`);
 
         resizingRef.current = true;
         lastMousePositionRef.current = {
@@ -80,10 +98,12 @@ export function Card({ card, onUpdate, getZoom }: Props) {
 
         lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
 
+        totalResizeRef.current.w += dx;
+        totalResizeRef.current.h += dy;
 
         const cardDiv = cardRef.current!;
-        cardDiv.style.width = `${(cardDiv.offsetWidth + dx) * zoom}px`;
-        cardDiv.style.height = `${(cardDiv.offsetHeight + dy) * zoom}px`;
+        cardDiv.style.width = `${card.w + totalResizeRef.current.w}px`;
+        cardDiv.style.height = `${(card.h + totalResizeRef.current.h)}px`;
     }
 
     const resizePointerUp = () => {
@@ -91,13 +111,13 @@ export function Card({ card, onUpdate, getZoom }: Props) {
 
         resizingRef.current = false;
 
-        const cardDiv = cardRef.current;
-
         onUpdate({
             ...card,
-            w: cardDiv.offsetWidth / getZoom(),
-            h: cardDiv.offsetHeight / getZoom(),
+            w: card.w + totalResizeRef.current.w,
+            h: card.h + totalResizeRef.current.h,
         })
+
+        totalResizeRef.current = {w: 0, h: 0};
     }
 
     const movePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -126,8 +146,6 @@ export function Card({ card, onUpdate, getZoom }: Props) {
         totalMovementRef.current.y += dy;
 
         const cardDiv = cardRef.current!;
-        // cardDiv.style.left = `${(card.x + totalMovementRef.current.x) * zoom}px`;
-        // cardDiv.style.top = `${(card.y + totalMovementRef.current.y) * zoom}px`;
         cardDiv.style.transform =
             `translate(${totalMovementRef.current.x}px, ${totalMovementRef.current.y}px)`;
     }
@@ -155,9 +173,9 @@ export function Card({ card, onUpdate, getZoom }: Props) {
                 width: card.w,
                 height: card.h,
                 zIndex: card.z,
-                border: "4px solid #aaa",
-                background: "#fff",
                 boxSizing: "border-box",
+                border: card.type === "iframe" ? "3px solid gray" : undefined,
+                background: card.type === "iframe" ? "#fff" : undefined,
                 cursor: "all-scroll",
                 transform: "translate(0px, 0px)",
             }}
@@ -165,6 +183,26 @@ export function Card({ card, onUpdate, getZoom }: Props) {
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
         >
+            {card.type === "iframe" && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 7,
+                        background: "gray",
+                        cursor: "all-scroll",
+                        zIndex: 2,
+                    }}
+                    onPointerDown={movePointerDown}
+                    onPointerMove={movePointerMove}
+                    onPointerUp={movePointerUp}
+                >
+
+                </div>
+            )}
+
             {content}
 
             <div
@@ -175,7 +213,6 @@ export function Card({ card, onUpdate, getZoom }: Props) {
                     width: 6,
                     height: 6,
                     background: "#666",
-                    // opacity: 0,
                     cursor: "nwse-resize"
                 }}
                 onPointerDown={resizePointerDown}
