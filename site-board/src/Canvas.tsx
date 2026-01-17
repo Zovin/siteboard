@@ -17,7 +17,10 @@ export default function Canvas() {
     const lastMousePositionRef = useRef<Point>(null);
 
     // using state since we want to reload everytime we add an item
-    const [items, setItems] = useState<Item[]>([]); 
+    const [items, setItems] = useState<Item[]>(() => {
+        const stored = localStorage.getItem("items");
+        return stored ? JSON.parse(stored) : [];
+    });
 
     const z = useRef(1);
     const itemsLayerRef = useRef<HTMLDivElement>(null);
@@ -184,9 +187,9 @@ export default function Canvas() {
     }
 
     const updateCard = (updatedCard: Item) => {
-        setItems((items) => 
-            items.map((item) => item.id == updatedCard.id ? updatedCard : item)
-        );
+        const updatedItems = items.map((item) => item.id == updatedCard.id ? updatedCard : item)
+        setItems(updatedItems);
+        localStorage.setItem("items", JSON.stringify(updatedItems));
     }
 
     const removeCard = (cardId: number) => {
@@ -196,6 +199,7 @@ export default function Canvas() {
 
     useEffect(() => {
         draw();
+        cardIdCounter.current = items.length;
     }, []);
 
   return (

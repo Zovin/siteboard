@@ -33,7 +33,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
 
     const removeCurrentCard = () => {
         removeCard(card.id);
-    }
+    }  
 
     let content;
 
@@ -213,7 +213,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
                     width: 6,
                     height: 6,
                     background: "#666",
-                    cursor: "nwse-resize"
+                    cursor: "nwse-resize"  
                 }}
                 onPointerDown={resizePointerDown}
                 onPointerMove={resizePointerMove}
