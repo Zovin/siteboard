@@ -1,0 +1,14 @@
+.anchor {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    background: white;
+    border: 1px solid blue;
+    border-radius: 50%;
+    cursor: pointer
+}
+
+.anchor-top { top: -18px; left: 50%; transform: translateX(-50%);}
+.anchor-bottom { bottom: -15px; left: 50%; transform: translateX(-50%);}
+.anchor-left { top: 50%; left: -15px; transform: translateY(-50%);}
+.anchor-right { top: 50%; right: -15px; transform: translateY(-50%);}

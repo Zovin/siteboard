@@ -16,5 +16,29 @@ export type Point = {
   y: number;
 };
 
+export type Arrow = {
+  id: string;
+  
+  from: {
+    cardId: number;
+    anchor: Anchor;
+  }
+
+  to: {
+    cardId?: number;
+    anchor?: Anchor;
+    x: number;
+    y: number;
+  }
+}
+
+export type Anchor = "top" | "right" | "bottom" | "left";
+
 
 export type CardType = "input" | "iframe";
+
+export type InteractionMode =
+| "idle"
+| "dragging-card"
+| "drawing-arrow"
+| "resizing"

@@ -1,17 +1,20 @@
 import { useRef } from "react";
-import type { Item, Point } from "../types/item";
+import type { Item, Point, Anchor, Arrow } from "../types/item";
+import "./Card.css"
 
 type Props = {
     card: Item;
     onUpdate: (card: Item) => void;
     getZoom: () => number;
     removeCard: (cardId: number) => void;
+    addArrow: (arrow: Arrow) => void;
 }
 
-export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
+export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
 
     const resizingRef = useRef<boolean>(false);
     const moveRef = useRef<boolean>(false);
+    const anchorRef = useRef<boolean>(false);
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -26,10 +29,24 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
     }
 
     const removeInputCard = () => {
-        if (card.type === "input") {
+        if (card.type === "input" && card.value === "") {
             removeCard(card.id);
         }
     }
+
+    const getAnchorPosition = (item: Item, anchor: Anchor) => {
+        switch(anchor) {
+            case "top":
+                return {x: item.x + item.w / 2, y: item.y }
+            case "bottom":
+                return {x: item.x + item.w / 2, y: item.y + item.h}
+            case "left":
+                return {x: item.x, y: item.y + item.h / 2}
+            case "right":
+                return {x: item.x + item.w, y: item.y + item.h / 2}
+        }
+    }
+
 
     const removeCurrentCard = () => {
         removeCard(card.id);
@@ -77,8 +94,6 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
     const resizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.stopPropagation();
 
-        console.log(`resize starting mouse position = ${e.clientX} , ${e.clientY}`);
-
         resizingRef.current = true;
         lastMousePositionRef.current = {
             x: e.clientX,
@@ -89,7 +104,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
     }
 
     const resizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!resizingRef.current || !lastMousePositionRef.current) return;
+        if (!resizingRef.current || !lastMousePositionRef.current || anchorRef.current) return;
 
         const zoom = getZoom();
 
@@ -107,7 +122,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
     }
 
     const resizePointerUp = () => {
-        if (!resizingRef.current || !cardRef.current) return;
+        if (!resizingRef.current || !cardRef.current || anchorRef.current) return;
 
         resizingRef.current = false;
 
@@ -121,6 +136,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
     }
 
     const movePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (anchorRef.current) return;
         e.stopPropagation();
 
         moveRef.current = true;
@@ -174,7 +190,7 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
                 height: card.h,
                 zIndex: card.z,
                 boxSizing: "border-box",
-                border: card.type === "iframe" ? "3px solid gray" : undefined,
+                border: card.type === "iframe" ? "5px solid gray" : undefined,
                 background: card.type === "iframe" ? "#fff" : undefined,
                 cursor: "all-scroll",
                 transform: "translate(0px, 0px)",
@@ -183,6 +199,30 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
         >
+
+            {(["top", "right", "bottom", "left"] as Anchor[]).map(side => (
+                <div 
+                    key={side}
+                    className={`anchor anchor-${side}`}
+                    onPointerDown={() => {
+                        moveRef.current = false;
+                        anchorRef.current = true;
+                        
+                        addArrow({
+                            id: `${card.id}${side}`,
+                            from: {
+                                cardId: card.id,
+                                anchor: side
+                            },
+                            to: getAnchorPosition(card, side)
+                        });
+
+
+                        // (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                    }}
+                />
+            ))}
+
             {card.type === "iframe" && (
                 <div
                     style={{
@@ -190,16 +230,32 @@ export function Card({ card, onUpdate, getZoom, removeCard }: Props) {
                         top: 0,
                         left: 0,
                         right: 0,
-                        height: 7,
+                        height: 14,
                         background: "gray",
                         cursor: "all-scroll",
                         zIndex: 2,
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end"
                     }}
                     onPointerDown={movePointerDown}
                     onPointerMove={movePointerMove}
                     onPointerUp={movePointerUp}
                 >
-
+                    <button
+                        onClick={removeCurrentCard}
+                        style={{
+                            backgroundColor: "transparent",
+                            color: "red",
+                            border: 0,
+                            padding: 0,
+                            paddingBottom: 7,
+                            cursor: "pointer"
+                        }}
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
 
