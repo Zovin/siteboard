@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { Item, Point, Anchor, Arrow } from "../types/item";
+import type { Item, Point, Anchor, Arrow, InteractionMode } from "../types/item";
 import "./Card.css"
 
 type Props = {
@@ -8,13 +8,16 @@ type Props = {
     getZoom: () => number;
     removeCard: (cardId: number) => void;
     addArrow: (arrow: Arrow) => void;
+    updateInteractionMode: (mode: InteractionMode) => void;
+    getInteractionMode: () => InteractionMode
 }
 
-export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
+export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode }: Props) {
 
-    const resizingRef = useRef<boolean>(false);
-    const moveRef = useRef<boolean>(false);
-    const anchorRef = useRef<boolean>(false);
+    // const resizingRef = useRef<boolean>(false);
+    // const moveRef = useRef<boolean>(false);
+    // const anchorRef = useRef<boolean>(false);
+    
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -66,27 +69,14 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
                     }
                 }}
                 onBlur={removeInputCard}
-                style={{ 
-                    width: "100%",
-                    height: "100%",
-                    border: "none",
-                    outline: "none",
-                    background: "transparent",
-                    caretColor: "white",
-                    fontSize: "20px",
-                }}
+                className="card-input"
             />
         )
     } else {
         content = (
             <iframe
                 src={withHttps(card.value)}
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    border: "none",
-                    outline: "none",
-                }}
+                className="card-iframe"
             />
         );
     }
@@ -94,7 +84,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     const resizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         e.stopPropagation();
 
-        resizingRef.current = true;
+        updateInteractionMode("resizing");
         lastMousePositionRef.current = {
             x: e.clientX,
             y: e.clientY,
@@ -104,7 +94,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     }
 
     const resizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!resizingRef.current || !lastMousePositionRef.current || anchorRef.current) return;
+        if (getInteractionMode() !== "resizing" || !lastMousePositionRef.current) return;
 
         const zoom = getZoom();
 
@@ -122,10 +112,10 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     }
 
     const resizePointerUp = () => {
-        if (!resizingRef.current || !cardRef.current || anchorRef.current) return;
+        if (getInteractionMode() !== "resizing" || !cardRef.current) return;
 
-        resizingRef.current = false;
-
+        updateInteractionMode("idle");
+        
         onUpdate({
             ...card,
             w: card.w + totalResizeRef.current.w,
@@ -136,10 +126,13 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     }
 
     const movePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (anchorRef.current) return;
+        if (getInteractionMode() === "drawing-arrow") return    // this is to prevent moving and drawing arrow at the same time
+
+        console.log("moving started");
         e.stopPropagation();
 
-        moveRef.current = true;
+        updateInteractionMode("dragging-card");
+
         lastMousePositionRef.current = {
             x: e.clientX,
             y: e.clientY,
@@ -149,7 +142,8 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     }
 
     const movePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!moveRef.current || !lastMousePositionRef.current || !totalMovementRef.current) return;
+        if (getInteractionMode() !== "dragging-card" || !lastMousePositionRef.current || !totalMovementRef.current) return
+
 
         const zoom = getZoom();
 
@@ -167,8 +161,9 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
     }
 
     const movePointerUp = () => {
-        if (!moveRef.current || !totalMovementRef.current) return;
-        moveRef.current = false;
+        if (getInteractionMode() !== "dragging-card" || !totalMovementRef.current) return
+
+        updateInteractionMode("idle");
 
         const dx = totalMovementRef.current.x;
         const dy = totalMovementRef.current.y;
@@ -179,80 +174,57 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
         totalMovementRef.current = { x: 0, y: 0};
     }
 
+    const onAnchorClick = (side: Anchor) => {
+        const updatedAnchors = card.anchors.filter((anchor) => anchor !== side);
+
+        // remove anchor
+        onUpdate({...card, anchors: updatedAnchors});
+
+        addArrow({
+            id: `${card.id}${side}`,
+            from: {
+                cardId: card.id,
+                anchor: side
+            },
+            to: getAnchorPosition(card, side)
+        });
+        updateInteractionMode("drawing-arrow");
+    }
+
     return (
         <div            
             ref={cardRef}
+            className={`card-div ${card.type === "iframe" ? "card-div-iframe": ""}`}
             style={{
-                position: "absolute",
                 left: card.x,
                 top: card.y,
                 width: card.w,
                 height: card.h,
-                zIndex: card.z,
-                boxSizing: "border-box",
-                border: card.type === "iframe" ? "5px solid gray" : undefined,
-                background: card.type === "iframe" ? "#fff" : undefined,
-                cursor: "all-scroll",
-                transform: "translate(0px, 0px)",
+                zIndex: card.z
             }}
             onPointerDown={movePointerDown}
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
         >
 
-            {(["top", "right", "bottom", "left"] as Anchor[]).map(side => (
+            {card.type === "iframe" && card.anchors.map(side => (
                 <div 
                     key={side}
                     className={`anchor anchor-${side}`}
-                    onPointerDown={() => {
-                        moveRef.current = false;
-                        anchorRef.current = true;
-                        
-                        addArrow({
-                            id: `${card.id}${side}`,
-                            from: {
-                                cardId: card.id,
-                                anchor: side
-                            },
-                            to: getAnchorPosition(card, side)
-                        });
-
-
-                        // (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                    }}
+                    onPointerDown={() => onAnchorClick(side)}
                 />
             ))}
 
             {card.type === "iframe" && (
                 <div
-                    style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 14,
-                        background: "gray",
-                        cursor: "all-scroll",
-                        zIndex: 2,
-
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "flex-end"
-                    }}
+                    className="card-header"
                     onPointerDown={movePointerDown}
                     onPointerMove={movePointerMove}
                     onPointerUp={movePointerUp}
                 >
                     <button
                         onClick={removeCurrentCard}
-                        style={{
-                            backgroundColor: "transparent",
-                            color: "red",
-                            border: 0,
-                            padding: 0,
-                            paddingBottom: 7,
-                            cursor: "pointer"
-                        }}
+                        className="card-close-btn"
                     >
                         ✕
                     </button>
@@ -262,15 +234,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow }: Props) {
             {content}
 
             <div
-                style={{
-                    position: "absolute",
-                    right: 0,
-                    bottom: 0,
-                    width: 6,
-                    height: 6,
-                    background: "#666",
-                    cursor: "nwse-resize"  
-                }}
+                className="card-resize-handle"
                 onPointerDown={resizePointerDown}
                 onPointerMove={resizePointerMove}
                 onPointerUp={resizePointerUp}

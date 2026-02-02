@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { type Arrow, type Item, type Point, type InteractionMode } from "./types/item";
 import { Card } from "./components/Card";
 import { Arrows } from "./components/Arrows";
+import './Canvas.css'
 
 export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,21 +16,17 @@ export default function Canvas() {
     const getZoom = () => {
         return zoomRef.current;
     }
-
-
-    // for pointer movement / grid movement
-    const moveGridEnabledRef = useRef(false);
-    // sets the state for when an arrow is being created
-    // used for onCursorMove
     
     const arrowIdRef = useRef<null | string>(null);
-    // const currentInteractionModeRef = useRef<InteractionMode>("idle");
-    
-    // const updateInteractionMode = (mode: InteractionMode) => {
-    //     currentInteractionModeRef.current = mode;
-    // }
-
     const lastMousePositionRef = useRef<Point>(null);
+
+    const currentInteractionModeRef = useRef<InteractionMode>("idle");
+    const updateInteractionMode = (mode: InteractionMode) => {
+        currentInteractionModeRef.current = mode;
+    }
+    const getInteractionMode = () => {
+        return currentInteractionModeRef.current;
+    }
 
     // using state since we want to reload everytime we add an item
     const [items, setItems] = useState<Item[]>(() => {
@@ -63,7 +60,11 @@ export default function Canvas() {
 
     const createArrow = (arrow: Arrow) => {
         if (arrowIdRef.current != null) return;
-        setArrows([...arrows, arrow]);
+        const newArrows = [...arrows, arrow];
+        
+        setArrows(newArrows);
+        localStorage.setItem("arrows", JSON.stringify(newArrows));
+        
         arrowIdRef.current = arrow.id;
     }
 
@@ -120,7 +121,7 @@ export default function Canvas() {
         e.currentTarget.setPointerCapture(e.pointerId);
         if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
         lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
-        moveGridEnabledRef.current = true;
+        currentInteractionModeRef.current = "camera-move";
     }
 
     const onMouseMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -129,41 +130,72 @@ export default function Canvas() {
             return;
         }
 
-        if (moveGridEnabledRef.current) {
-            const dx = e.clientX - lastMousePositionRef.current.x;
-            const dy = e.clientY - lastMousePositionRef.current.y;
-            lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
-            const zoom = zoomRef.current;
-    
-            curPosRef.current.x -= dx / zoom;
-            curPosRef.current.y -= dy / zoom;
-    
-            draw();
-            transformItems();
-        } else if (arrowIdRef.current) {
-            const zoom = zoomRef.current;
-            const worldX = e.clientX / zoom + curPosRef.current.x;
-            const worldY = e.clientY / zoom + curPosRef.current.y;
+        const zoom = zoomRef.current;
 
-            const arrow = arrows.find(a => a.id === arrowIdRef.current);
-            if (!arrow) return;
+        switch (currentInteractionModeRef.current) {
+            case "camera-move":
+                const dx = e.clientX - lastMousePositionRef.current.x;
+                const dy = e.clientY - lastMousePositionRef.current.y;
+                
+                lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
+        
+                curPosRef.current.x -= dx / zoom;
+                curPosRef.current.y -= dy / zoom;
+        
+                draw();
+                transformItems();
+                break;
 
+            case "drawing-arrow":
+                if (!arrowIdRef.current) return;
+                const worldX = e.clientX / zoom + curPosRef.current.x;
+                const worldY = e.clientY / zoom + curPosRef.current.y;
 
-            arrow.to.x = worldX;
-            arrow.to.y = worldY;
+                const updatedArrows = [...arrows];
 
-            setArrows([...arrows]);
+                const arrowIndex = arrows.findIndex(a => a.id === arrowIdRef.current);
+                if (arrowIndex === -1) return;
+                
+                updatedArrows[arrowIndex] = {
+                    ...updatedArrows[arrowIndex],
+                    to: { x: worldX, y: worldY }
+                };
+
+                setArrows(updatedArrows);
+                localStorage.setItem("arrows", JSON.stringify(updatedArrows));
+                break;
+
+            default: 
+                break;
         }
     }
 
-    const onMouseUp = () => {
-        if (moveGridEnabledRef.current) {
-            moveGridEnabledRef.current = false;
-            if (canvasRef.current) canvasRef.current.style.cursor = "default";
-        } else if (arrowIdRef.current != null) {
-            arrowIdRef.current = null;
+    // onMouseUp has to be attached to window since it might not be started in the canvas
+    // but it can end in the canvas, in that case, the interaction doesn't get detected here.
+    // so attach it to window so it always gets detected.
+    useEffect(() => {
+        const handleMouseUp = () => {
+            switch (currentInteractionModeRef.current) {
+                case "camera-move":
+                    if (canvasRef.current) canvasRef.current.style.cursor = "default";
+                    break;
+
+                case "drawing-arrow":
+                    arrowIdRef.current = null;
+                    break;
+
+                default:
+                    break;
+            }
+
+            updateInteractionMode("idle");
         }
-    }
+
+        window.addEventListener("mouseup", handleMouseUp);
+        return () => {
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    })
 
     const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault(); // prevent scrolling down
@@ -220,7 +252,8 @@ export default function Canvas() {
             id: cardIdCounter.current,
 
             type: "input",
-            value: ""
+            value: "",
+            anchors: ["top", "right", "bottom", "left"]
         }])
 
         z.current += 1;
@@ -244,57 +277,22 @@ export default function Canvas() {
         draw();
     }, []);
 
-    useEffect(() => {
-        const handleMouseUp = () => {
-            if (moveGridEnabledRef.current) {
-              moveGridEnabledRef.current = false;
-                if (canvasRef.current) canvasRef.current.style.cursor = "default";
-            } else if (arrowIdRef.current) {
-                arrowIdRef.current = null;
-            }
-            lastMousePositionRef.current = null;
-        }
-
-        window.addEventListener("mouseup", handleMouseUp);
-        return () => {
-            window.removeEventListener("mouseup", handleMouseUp);
-        };
-    })
-
   return (
-    <div style={{ width: "100%", height: "100vh", display: "block", overflow: "hidden", position: "relative",  }}>
+    <div className="canvas-container">
         <canvas 
             ref={canvasRef} 
-            style={{ width: "100%", height: "100%", display: "block", position: "absolute",}}
+            className="canvas-layer"
             onMouseDown={onMouseDown}
-            onMouseUp={onMouseUp}
             onMouseMove={onMouseMove}
             onWheel={onWheel}
             onDoubleClick={onDoubleClick}
         />
 
-        <div
-            ref={arrowsLayerRef}
-            style={{  
-                position: "absolute",
-                transformOrigin: "top left",
-                zIndex: 2,
-                pointerEvents: "none",
-                overflow: "visible"
-            }}
-        >
+        <div ref={arrowsLayerRef} className="arrows-layer">
             <Arrows items={items} arrows={arrows}/>
         </div>
 
-        <div
-            ref = {itemsLayerRef}
-            style={{  
-                position: "absolute",
-                transformOrigin: "top left",
-                zIndex: 1,
-            }}
-        >
-
+        <div ref = {itemsLayerRef} className="items-layer">
             {items.map(item => (
                 <Card
                     key={item.id}
@@ -303,6 +301,8 @@ export default function Canvas() {
                     getZoom={getZoom}
                     removeCard={removeCard}
                     addArrow={createArrow}
+                    updateInteractionMode={updateInteractionMode}
+                    getInteractionMode={getInteractionMode}
                 />
             ))}
         </div>

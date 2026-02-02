@@ -60,8 +60,6 @@ export function Arrows({items, arrows}: Props) {
                     return null
                 }
 
-                console.log(`from {${from.x}, ${from.y}} to {${to.x}, ${to.y}}`)
-
                 return (
                     <line
                         key={arrow.id}

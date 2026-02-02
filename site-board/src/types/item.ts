@@ -8,7 +8,8 @@ export type Item = {
     z: number;
 
     type: CardType;
-    value: string
+    value: string;
+    anchors: Anchor[];
 }
 
 export type Point = {
@@ -42,3 +43,4 @@ export type InteractionMode =
 | "dragging-card"
 | "drawing-arrow"
 | "resizing"
+| "camera-move"
