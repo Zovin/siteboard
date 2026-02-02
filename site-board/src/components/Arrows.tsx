@@ -1,29 +1,18 @@
 import React from "react";
-import type { Item, Arrow, Anchor } from "../types/item"
+import type { Item, Arrow } from "../types/item"
 import './Arrows.css'
+import { getAnchorPosition } from "../helper/snapHelper";
 
 type Props = {
     items: Item[];
     arrows: Arrow[];
     moveArrow: (arrow: Arrow) => void;
-    
+    getFocusItem: () => number | string | null;
+    setFocusItem: (id: number | string | null) => void;
 }
 
-export function Arrows({items, arrows, moveArrow}: Props) {
+export function Arrows({items, arrows, moveArrow, getFocusItem, setFocusItem}: Props) {
     const findItem = (id: number) => items.find((item) => item.id === id);
-
-    const getAnchorPosition = (item: Item, anchor: Anchor) => {
-        switch(anchor) {
-            case "top":
-                return {x: item.x + item.w / 2, y: item.y }
-            case "bottom":
-                return {x: item.x + item.w / 2, y: item.y + item.h}
-            case "left":
-                return {x: item.x, y: item.y + item.h / 2}
-            case "right":
-                return {x: item.x + item.w, y: item.y + item.h / 2}
-        }
-    }
 
     return (
         <svg className="arrows-svg">
@@ -68,22 +57,27 @@ export function Arrows({items, arrows, moveArrow}: Props) {
                 return (
                     <React.Fragment key={arrow.id}>
                         <line
-                        x1={from.x}
-                        y1={from.y}
-                        x2={to.x}
-                        y2={to.y}
-                        className="arrow-line"
-                        markerEnd="url(#arrowhead)"
+                            x1={from.x}
+                            y1={from.y}
+                            x2={to.x}
+                            y2={to.y}
+                            className="arrow-line"
+                            markerEnd="url(#arrowhead)"
+                            pointerEvents="stroke" 
+                            onClick={() => setFocusItem(arrow.id)}
                         />
-                        <circle
-                        className="arrow-endpoint"
-                        cx={to.x + offsetX}
-                        cy={to.y + offsetY}
-                        r={5}
-                        fill="white"
-                        stroke="blue"
-                        onPointerDown={() => moveArrow(arrow)}
-                        />
+
+                        {getFocusItem() === arrow.id &&
+                            <circle
+                            className="arrow-endpoint"
+                            cx={to.x + offsetX}
+                            cy={to.y + offsetY}
+                            r={5}
+                            fill="white"
+                            stroke="blue"
+                            onPointerDown={() => moveArrow(arrow)}
+                            />
+                        }
                     </React.Fragment>
                 );
             })}

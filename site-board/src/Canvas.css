@@ -11,12 +11,13 @@
     height: 100%;
     display: block;
     position: absolute;
+    z-index: 0;
 }
 
 .arrows-layer {
     position: absolute;
     transform-origin: top left;
-    z-index: 2;
+    z-index: 3;
     pointer-events: none;
     overflow: visible;
 }

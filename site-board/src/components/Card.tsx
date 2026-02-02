@@ -10,10 +10,12 @@ type Props = {
     removeCard: (cardId: number) => void;
     addArrow: (arrow: Arrow) => void;
     updateInteractionMode: (mode: InteractionMode) => void;
-    getInteractionMode: () => InteractionMode
+    getInteractionMode: () => InteractionMode;
+    getFocusItem: () => number | string | null;
+    setFocusItem: (id: number | string) => void;
 }
 
-export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode }: Props) {
+export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode, getFocusItem, setFocusItem }: Props) {
 
     // const resizingRef = useRef<boolean>(false);
     // const moveRef = useRef<boolean>(false);
@@ -113,6 +115,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
     }
 
     const movePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (getFocusItem() !== card.id) setFocusItem(card.id);
         if (getInteractionMode() === "drawing-arrow") return    // this is to prevent moving and drawing arrow at the same time
 
         console.log("moving started");
@@ -194,7 +197,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             onPointerUp={movePointerUp}
         >
 
-            {card.type === "iframe" && card.anchors.map(side => (
+            {getFocusItem() === card.id && card.type === "iframe" && card.anchors.map(side => (
                 <div 
                     key={side}
                     className={`anchor anchor-${side}`}

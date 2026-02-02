@@ -21,6 +21,15 @@ export default function Canvas() {
     const arrowIdRef = useRef<null | string>(null);
     const lastMousePositionRef = useRef<Point>(null);
 
+    const [focusedItemId, setFocusedItemId] = useState<number | string | null>(null);
+    const getCurrentFocusItem = () => {
+        return focusedItemId;
+    }
+    const setFocusItem = (id: number | string | null) => {
+        console.log("set to" + id)
+        setFocusedItemId(id);
+    }
+
     const currentInteractionModeRef = useRef<InteractionMode>("idle");
     const updateInteractionMode = (mode: InteractionMode) => {
         currentInteractionModeRef.current = mode;
@@ -114,6 +123,7 @@ export default function Canvas() {
     }
 
     const onMouseDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+        setFocusItem(null);
         if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
         lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
         currentInteractionModeRef.current = "camera-move";
@@ -192,7 +202,29 @@ export default function Canvas() {
         return () => {
             window.removeEventListener("mouseup", handleMouseUp);
         };
-    })
+    }, []);
+
+    
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+
+            console.log(`${getCurrentFocusItem()}`);
+            if (!getCurrentFocusItem()) return;
+            const id = getCurrentFocusItem()?.toString();
+
+
+            if (e.key === "Delete" || e.key === "Backspace") {
+                console.log("test")
+                const arrowToRemove = arrows.find(arrow => arrow.id === id);
+                if (!arrowToRemove) return;
+                removeArrow(arrowToRemove);
+                setFocusItem(null);
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [focusedItemId, arrows]);
 
     const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault(); // prevent scrolling down
@@ -270,6 +302,22 @@ export default function Canvas() {
         localStorage.setItem("items", JSON.stringify(updatedCards));
     }
 
+    const removeArrow = (arrowToRemove: Arrow) => {
+        const updatedArrows = arrows.filter(a => a.id !== arrowToRemove.id);
+        setArrows(updatedArrows);
+        localStorage.setItem("arrows", JSON.stringify(updatedArrows));
+
+        // Restore the 'from' anchor
+        const fromItem = items.find(i => i.id === arrowToRemove.from.cardId);
+        if (fromItem && !fromItem.anchors.includes(arrowToRemove.from.anchor)) {
+            const updatedFromItem = {
+                ...fromItem,
+                anchors: [...fromItem.anchors, arrowToRemove.from.anchor]
+            };
+            updateCard(updatedFromItem);
+        }
+    }
+
     useEffect(() => {
         draw();
     }, []);
@@ -286,7 +334,13 @@ export default function Canvas() {
         />
 
         <div ref={arrowsLayerRef} className="arrows-layer">
-            <Arrows items={items} arrows={arrows} moveArrow={moveArrow}/>
+            <Arrows 
+                items={items} 
+                arrows={arrows} 
+                moveArrow={moveArrow} 
+                getFocusItem={getCurrentFocusItem}
+                setFocusItem={setFocusItem}
+            />
         </div>
 
         <div ref = {itemsLayerRef} className="items-layer">
@@ -300,6 +354,8 @@ export default function Canvas() {
                     addArrow={createArrow}
                     updateInteractionMode={updateInteractionMode}
                     getInteractionMode={getInteractionMode}
+                    getFocusItem={getCurrentFocusItem}
+                    setFocusItem={setFocusItem}
                 />
             ))}
         </div>
