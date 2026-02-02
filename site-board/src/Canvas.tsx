@@ -9,11 +9,11 @@ export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const curPosRef = useRef<Point>({x: 0, y: 0});
 
-    const spacingRef = useRef(50);
+    const spacingRef = useRef(100);
 
     const zoomRef = useRef(1);
-    const minZoom = 0.5;
-    const maxZoom = 5;
+    const minZoom = 0.2;
+    const maxZoom = 8;
     const getZoom = () => {
         return zoomRef.current;
     }
@@ -75,7 +75,6 @@ export default function Canvas() {
     }
 
     const draw = () => {
-
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -95,33 +94,23 @@ export default function Canvas() {
 
         const spacing = spacingRef.current;
         const zoomSpacing = spacingRef.current * zoom;
+        const dotRadius = 3 * zoom;
 
-        const worldFirstX = Math.ceil(worldX / spacing) * spacing;  // gets the 
+        const worldFirstX = Math.ceil(worldX / spacing) * spacing;
         const worldFirstY = Math.ceil(worldY / spacing) * spacing;
 
-        let x = (worldFirstX - worldX) * zoom;
-        let y = (worldFirstY - worldY) * zoom;
         const endX = canvas.width;
         const endY = canvas.height;
 
+        ctx.fillStyle = `rgba(224,224,224, ${zoom / 1.5})`;
 
-        ctx.beginPath()
-
-        while (x < endX) {
-            ctx.moveTo(x,0);
-            ctx.lineTo(x, endY);
-            x += zoomSpacing;
+        for (let x = (worldFirstX - worldX) * zoom; x <= endX; x += zoomSpacing) {
+            for (let y = (worldFirstY - worldY) * zoom; y <= endY; y += zoomSpacing) {
+                ctx.beginPath();
+                ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
-
-        while (y < endY) {
-            ctx.moveTo(0, y);
-            ctx.lineTo(endX, y);
-            y += zoomSpacing;
-        }
-
-        ctx.strokeStyle = "rgba(224, 224, 224, 0.5)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
     }
 
     const onMouseDown = (e: React.PointerEvent<HTMLCanvasElement>) => {

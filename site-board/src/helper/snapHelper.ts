@@ -1,6 +1,6 @@
 import type { Anchor, ArrowEnd, Item } from "../types/item"
 
-const SNAP_DISTANCE = 20;
+const SNAP_DISTANCE = 40;
 
 export const getAnchorPosition = (item: Item, anchor: Anchor) => {
     switch(anchor) {
