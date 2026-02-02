@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import type { Item, Point, Anchor, Arrow, InteractionMode } from "../types/item";
 import "./Card.css"
+import { getAnchorPosition } from "../helper/snapHelper";
 
 type Props = {
     card: Item;
@@ -36,20 +37,6 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             removeCard(card.id);
         }
     }
-
-    const getAnchorPosition = (item: Item, anchor: Anchor) => {
-        switch(anchor) {
-            case "top":
-                return {x: item.x + item.w / 2, y: item.y }
-            case "bottom":
-                return {x: item.x + item.w / 2, y: item.y + item.h}
-            case "left":
-                return {x: item.x, y: item.y + item.h / 2}
-            case "right":
-                return {x: item.x + item.w, y: item.y + item.h / 2}
-        }
-    }
-
 
     const removeCurrentCard = () => {
         removeCard(card.id);
@@ -186,7 +173,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
                 cardId: card.id,
                 anchor: side
             },
-            to: getAnchorPosition(card, side)
+            to: {...getAnchorPosition(card, side), type: "free"}
         });
         updateInteractionMode("drawing-arrow");
     }

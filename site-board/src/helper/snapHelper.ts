@@ -18,15 +18,15 @@ export const getAnchorPosition = (item: Item, anchor: Anchor) => {
 export const findSnapTarget = (worldX: number, worldY: number, items: Item[]): ArrowEnd | null  =>{
     for (const card of items) {
         for (const side of card.anchors) {
-        const pos = getAnchorPosition(card, side);
+            const pos = getAnchorPosition(card, side);
 
-        const dx = pos.x - worldX;
-        const dy = pos.y - worldY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+            const dx = pos.x - worldX;
+            const dy = pos.y - worldY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < SNAP_DISTANCE) {
-            return { type: "attached", cardId: card.id, anchor: side };
-        }
+            if (dist < SNAP_DISTANCE) {
+                return { type: "attached", cardId: card.id, anchor: side };
+            }
         }
     }
     return null;

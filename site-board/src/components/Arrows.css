@@ -1,0 +1,25 @@
+.arrow-endpoint {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid blue;
+    cursor: pointer;
+    z-index: 6;
+    pointer-events: all;
+}
+
+.arrows-svg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+}
+
+.arrow-line {
+    stroke: white;
+    stroke-width: 2;
+    marker-end: url(#arrowhead);
+}

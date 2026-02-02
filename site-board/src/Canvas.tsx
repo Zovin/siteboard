@@ -69,6 +69,11 @@ export default function Canvas() {
         arrowIdRef.current = arrow.id;
     }
 
+    const moveArrow = (arrow: Arrow) => {
+        arrowIdRef.current = arrow.id;
+        updateInteractionMode("drawing-arrow");
+    }
+
     const draw = () => {
 
         const canvas = canvasRef.current;
@@ -292,7 +297,7 @@ export default function Canvas() {
         />
 
         <div ref={arrowsLayerRef} className="arrows-layer">
-            <Arrows items={items} arrows={arrows}/>
+            <Arrows items={items} arrows={arrows} moveArrow={moveArrow}/>
         </div>
 
         <div ref = {itemsLayerRef} className="items-layer">
