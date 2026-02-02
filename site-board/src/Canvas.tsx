@@ -3,6 +3,7 @@ import { type Arrow, type Item, type Point, type InteractionMode } from "./types
 import { Card } from "./components/Card";
 import { Arrows } from "./components/Arrows";
 import './Canvas.css'
+import { findSnapTarget } from "./helper/snapHelper";
 
 export default function Canvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,6 +70,7 @@ export default function Canvas() {
     }
 
     const draw = () => {
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -118,7 +120,6 @@ export default function Canvas() {
     }
 
     const onMouseDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-        e.currentTarget.setPointerCapture(e.pointerId);
         if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
         lastMousePositionRef.current = {x: e.clientX, y: e.clientY};
         currentInteractionModeRef.current = "camera-move";
@@ -155,10 +156,12 @@ export default function Canvas() {
 
                 const arrowIndex = arrows.findIndex(a => a.id === arrowIdRef.current);
                 if (arrowIndex === -1) return;
+
+                const snap = findSnapTarget(worldX, worldY, items);
                 
                 updatedArrows[arrowIndex] = {
                     ...updatedArrows[arrowIndex],
-                    to: { x: worldX, y: worldY }
+                    to: snap ?? { type: "free", x: worldX, y: worldY }
                 };
 
                 setArrows(updatedArrows);

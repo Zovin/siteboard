@@ -25,16 +25,13 @@ export type Arrow = {
     anchor: Anchor;
   }
 
-  to: {
-    cardId?: number;
-    anchor?: Anchor;
-    x: number;
-    y: number;
-  }
+  to: ArrowEnd;
 }
 
 export type Anchor = "top" | "right" | "bottom" | "left";
-
+export type ArrowEnd = 
+   { type: "free"; x: number; y: number }
+  | { type: "attached"; cardId: number; anchor: Anchor };
 
 export type CardType = "input" | "iframe";
 

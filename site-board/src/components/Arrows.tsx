@@ -50,11 +50,11 @@ export function Arrows({items, arrows}: Props) {
                 const from = getAnchorPosition(fromItem, arrow.from.anchor);
                 
                 let to;
-                if (arrow.to.cardId && arrow.to.anchor) {
+                if (arrow.to.type == "attached") {
                     const toItem = findItem(arrow.to.cardId);
                     if (!toItem) return null
                     to = getAnchorPosition(toItem, arrow.to.anchor);
-                } else if (arrow.to.x != null && arrow.to.y != null) {
+                } else if (arrow.to.type == "free") {
                     to = {x: arrow.to.x, y: arrow.to.y}
                 } else {
                     return null
