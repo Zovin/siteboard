@@ -16,11 +16,6 @@ type Props = {
 }
 
 export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode, getFocusItem, setFocusItem }: Props) {
-
-    // const resizingRef = useRef<boolean>(false);
-    // const moveRef = useRef<boolean>(false);
-    // const anchorRef = useRef<boolean>(false);
-    
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
 
