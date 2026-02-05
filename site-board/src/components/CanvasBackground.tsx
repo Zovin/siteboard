@@ -1,6 +1,14 @@
 import React, { useEffect, useRef } from "react";
 import { type Point, type InteractionMode } from "../types/item";
 
+const canvasStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  display: "block",
+  position: "absolute",
+  zIndex: 0,
+};
+
 type CanvasBackgroundProps = {
     camera: React.RefObject<Point>;
     zoomRef: React.RefObject<number>;
@@ -156,7 +164,7 @@ export function CanvasBackground({
     return (
         <canvas 
             ref={canvasRef} 
-            className="canvas-layer"
+            style={canvasStyle}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
