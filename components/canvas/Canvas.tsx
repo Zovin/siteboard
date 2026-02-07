@@ -1,37 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { type Arrow, type Item, type Point, type InteractionMode } from "@/types/item";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type Arrow, type Item, type Point, type InteractionMode, type ToolMode } from "@/types/item";
 import { Card } from "@/components/canvas/Card";
 import { Arrows } from "@/components/canvas/Arrows";
 import { findSnapTarget } from "@/lib/snapHelper";
 import { CanvasBackground } from "@/components/canvas/CanvasBackground";
+import { Toolbar } from "@/components/canvas/Toolbar";
+import { StatusBar } from "@/components/canvas/StatusBar";
 
 export default function Canvas() {
     const curPosRef = useRef<Point>({x: 0, y: 0});
 
     const zoomRef = useRef(1);
-    const getZoom = () => {
-        return zoomRef.current;
-    }
-    
+    const [zoomPercent, setZoomPercent] = useState(100);
+    const getZoom = () => zoomRef.current;
+
     const arrowIdRef = useRef<null | string>(null);
 
+    const [toolMode, setToolMode] = useState<ToolMode>("select");
+    const toolModeRef = useRef<ToolMode>("select");
+    const updateToolMode = (mode: ToolMode) => {
+        setToolMode(mode);
+        toolModeRef.current = mode;
+    };
+
     const [focusedItemId, setFocusedItemId] = useState<number | string | null>(null);
-    const getCurrentFocusItem = () => {
-        return focusedItemId;
-    }
-    const setFocusItem = (id: number | string | null) => {
-        setFocusedItemId(id);
-    }
+    const getCurrentFocusItem = () => focusedItemId;
+    const setFocusItem = (id: number | string | null) => setFocusedItemId(id);
 
     const currentInteractionModeRef = useRef<InteractionMode>("idle");
     const updateInteractionMode = (mode: InteractionMode) => {
         currentInteractionModeRef.current = mode;
-    }
-    const getInteractionMode = () => {
-        return currentInteractionModeRef.current;
-    }
+    };
+    const getInteractionMode = () => currentInteractionModeRef.current;
 
     const [items, setItems] = useState<Item[]>(() => {
         if (typeof window === "undefined") return [];
@@ -42,7 +44,7 @@ export default function Canvas() {
         if (typeof window === "undefined") return [];
         const stored = localStorage.getItem("arrows");
         return stored ? JSON.parse(stored) : [];
-    })
+    });
 
     const z = useRef(1);
     const itemsLayerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,9 @@ export default function Canvas() {
         cardIdCounter.current = Number(localStorage.getItem("idCount") ?? 0);
     }, []);
 
-    const transformItems = () => {
+    const drawRef = useRef<(() => void) | null>(null);
+
+    const transformItems = useCallback(() => {
         const itemsLayer = itemsLayerRef.current;
         const arrowsLayer = arrowsLayerRef.current;
         if (!itemsLayer || !arrowsLayer) return;
@@ -65,23 +69,69 @@ export default function Canvas() {
 
         itemsLayer.style.transform = `scale(${zoom}) translate(${-cameraX}px, ${-cameraY}px)`;
         arrowsLayer.style.transform = `scale(${zoom}) translate(${-cameraX}px, ${-cameraY}px)`;
-    };
+    }, []);
 
+    const handleZoomChange = useCallback(() => {
+        setZoomPercent(Math.round(zoomRef.current * 100));
+    }, []);
+
+    const onZoomIn = useCallback(() => {
+        const oldZoom = zoomRef.current;
+        const newZoom = Math.min(8, oldZoom * 1.2);
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const worldX = curPosRef.current.x + cx / oldZoom;
+        const worldY = curPosRef.current.y + cy / oldZoom;
+        curPosRef.current.x = worldX - cx / newZoom;
+        curPosRef.current.y = worldY - cy / newZoom;
+        zoomRef.current = newZoom;
+        handleZoomChange();
+        transformItems();
+        drawRef.current?.();
+    }, [handleZoomChange, transformItems]);
+
+    const onZoomOut = useCallback(() => {
+        const oldZoom = zoomRef.current;
+        const newZoom = Math.max(0.2, oldZoom * 0.8);
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const worldX = curPosRef.current.x + cx / oldZoom;
+        const worldY = curPosRef.current.y + cy / oldZoom;
+        curPosRef.current.x = worldX - cx / newZoom;
+        curPosRef.current.y = worldY - cy / newZoom;
+        zoomRef.current = newZoom;
+        handleZoomChange();
+        transformItems();
+        drawRef.current?.();
+    }, [handleZoomChange, transformItems]);
+
+    const onZoomReset = useCallback(() => {
+        const oldZoom = zoomRef.current;
+        const newZoom = 1;
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const worldX = curPosRef.current.x + cx / oldZoom;
+        const worldY = curPosRef.current.y + cy / oldZoom;
+        curPosRef.current.x = worldX - cx / newZoom;
+        curPosRef.current.y = worldY - cy / newZoom;
+        zoomRef.current = newZoom;
+        handleZoomChange();
+        transformItems();
+        drawRef.current?.();
+    }, [handleZoomChange, transformItems]);
 
     const createArrow = (arrow: Arrow) => {
         if (arrowIdRef.current != null) return;
         const newArrows = [...arrows, arrow];
-        
         setArrows(newArrows);
         localStorage.setItem("arrows", JSON.stringify(newArrows));
-        
         arrowIdRef.current = arrow.id;
-    }
+    };
 
     const moveArrow = (arrow: Arrow) => {
         arrowIdRef.current = arrow.id;
         updateInteractionMode("drawing-arrow");
-    }
+    };
 
     const arrowsRef = useRef(arrows);
     const itemsRef = useRef(items);
@@ -93,20 +143,19 @@ export default function Canvas() {
         const handleMouseMove = (e: MouseEvent) => {
             if (currentInteractionModeRef.current !== "drawing-arrow") return;
             if (!arrowIdRef.current) return;
-            
-            const zoom = zoomRef.current;
 
+            const zoom = zoomRef.current;
             const worldX = e.clientX / zoom + curPosRef.current.x;
             const worldY = e.clientY / zoom + curPosRef.current.y;
 
-            const arrows = arrowsRef.current;
-            const items = itemsRef.current;
+            const currentArrows = arrowsRef.current;
+            const currentItems = itemsRef.current;
 
-            const arrowIndex = arrows.findIndex(a => a.id === arrowIdRef.current);
+            const arrowIndex = currentArrows.findIndex(a => a.id === arrowIdRef.current);
             if (arrowIndex === -1) return;
 
-            const updatedArrows = [...arrows];
-            const snap = findSnapTarget(worldX, worldY, items);
+            const updatedArrows = [...currentArrows];
+            const snap = findSnapTarget(worldX, worldY, currentItems);
 
             updatedArrows[arrowIndex] = {
                 ...updatedArrows[arrowIndex],
@@ -130,19 +179,27 @@ export default function Canvas() {
                 default:
                     break;
             }
-
             updateInteractionMode("idle");
-        }
+        };
 
         window.addEventListener("mouseup", handleMouseUp);
-        return () => {
-            window.removeEventListener("mouseup", handleMouseUp);
-        };
+        return () => window.removeEventListener("mouseup", handleMouseUp);
     }, []);
 
-    
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Tool mode shortcuts
+            if (e.key === "v" || e.key === "V") {
+                updateToolMode("select");
+                return;
+            }
+            if (e.key === "a" || e.key === "A") {
+                const active = document.activeElement;
+                if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
+                updateToolMode("arrow");
+                return;
+            }
+
             if (!getCurrentFocusItem()) return;
             const id = getCurrentFocusItem()?.toString();
 
@@ -152,7 +209,7 @@ export default function Canvas() {
                 removeArrow(arrowToRemove);
                 setFocusItem(null);
             }
-        }
+        };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
@@ -166,28 +223,27 @@ export default function Canvas() {
             h: 40,
             z: z.current,
             id: cardIdCounter.current,
-
             type: "input",
             value: "",
             anchors: ["top", "right", "bottom", "left"]
-        }])
+        }]);
 
         z.current += 1;
         cardIdCounter.current += 1;
         localStorage.setItem("idCount", `${cardIdCounter.current + 1}`);
-    }
+    };
 
     const updateCard = (updatedCard: Item) => {
-        const updatedItems = items.map((item) => item.id == updatedCard.id ? updatedCard : item)
+        const updatedItems = items.map((item) => item.id == updatedCard.id ? updatedCard : item);
         setItems(updatedItems);
         localStorage.setItem("items", JSON.stringify(updatedItems));
-    }
+    };
 
     const removeCard = (cardId: number) => {
         const updatedCards = items.filter(c => c.id != cardId);
         setItems(updatedCards);
         localStorage.setItem("items", JSON.stringify(updatedCards));
-    }
+    };
 
     const removeArrow = (arrowToRemove: Arrow) => {
         const updatedArrows = arrows.filter(a => a.id !== arrowToRemove.id);
@@ -202,46 +258,62 @@ export default function Canvas() {
             };
             updateCard(updatedFromItem);
         }
-    }
+    };
 
-
-  return (
-    <div className="canvas-container">
-        <CanvasBackground 
-            camera={curPosRef}
-            zoomRef={zoomRef}
-            interactionMode={currentInteractionModeRef}
-            addCard={addInputCard}
-            transformItems={transformItems}
-            setFocusItem={setFocusItem}
-        />
-
-        <div ref={arrowsLayerRef} className="arrows-layer">
-            <Arrows 
-                items={items} 
-                arrows={arrows} 
-                moveArrow={moveArrow} 
-                getFocusItem={getCurrentFocusItem}
+    return (
+        <div className="canvas-container">
+            <CanvasBackground
+                camera={curPosRef}
+                zoomRef={zoomRef}
+                interactionMode={currentInteractionModeRef}
+                addCard={addInputCard}
+                transformItems={transformItems}
                 setFocusItem={setFocusItem}
+                onZoomChange={handleZoomChange}
+                drawRef={drawRef}
             />
-        </div>
 
-        <div ref={itemsLayerRef} className="items-layer">
-            {items.map(item => (
-                <Card
-                    key={item.id}
-                    card={item}
-                    onUpdate={updateCard}
-                    getZoom={getZoom}
-                    removeCard={removeCard}
-                    addArrow={createArrow}
-                    updateInteractionMode={updateInteractionMode}
-                    getInteractionMode={getInteractionMode}
+            <div ref={arrowsLayerRef} className="arrows-layer">
+                <Arrows
+                    items={items}
+                    arrows={arrows}
+                    moveArrow={moveArrow}
                     getFocusItem={getCurrentFocusItem}
                     setFocusItem={setFocusItem}
                 />
-            ))}
+            </div>
+
+            <div ref={itemsLayerRef} className="items-layer">
+                {items.map(item => (
+                    <Card
+                        key={item.id}
+                        card={item}
+                        onUpdate={updateCard}
+                        getZoom={getZoom}
+                        removeCard={removeCard}
+                        addArrow={createArrow}
+                        updateInteractionMode={updateInteractionMode}
+                        getInteractionMode={getInteractionMode}
+                        getFocusItem={getCurrentFocusItem}
+                        setFocusItem={setFocusItem}
+                        toolMode={toolModeRef.current}
+                    />
+                ))}
+            </div>
+
+            <Toolbar
+                toolMode={toolMode}
+                setToolMode={updateToolMode}
+                zoomPercent={zoomPercent}
+                onZoomIn={onZoomIn}
+                onZoomOut={onZoomOut}
+                onZoomReset={onZoomReset}
+            />
+
+            <StatusBar
+                cardCount={items.filter(i => i.type === "iframe").length}
+                arrowCount={arrows.length}
+            />
         </div>
-    </div>
-  );
+    );
 }

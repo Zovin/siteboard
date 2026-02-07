@@ -41,3 +41,5 @@ export type InteractionMode =
 | "drawing-arrow"
 | "resizing"
 | "camera-move"
+
+export type ToolMode = "select" | "arrow"
