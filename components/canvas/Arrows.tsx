@@ -26,7 +26,17 @@ export function Arrows({items, arrows, moveArrow, getFocusItem, setFocusItem}: P
                     refY="3.5" 
                     orient="auto"
                 >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="white"/>
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+                </marker>
+                <marker 
+                    id="arrowhead-selected" 
+                    markerWidth="10" 
+                    markerHeight="7" 
+                    refX="10" 
+                    refY="3.5" 
+                    orient="auto"
+                >
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa"/>
                 </marker>
             </defs>
 
@@ -53,6 +63,8 @@ export function Arrows({items, arrows, moveArrow, getFocusItem, setFocusItem}: P
                 const offsetX = (dx / len) * offset;
                 const offsetY = (dy / len) * offset;
 
+                const isSelected = getFocusItem() === arrow.id;
+
                 return (
                     <React.Fragment key={arrow.id}>
                         <line
@@ -60,21 +72,19 @@ export function Arrows({items, arrows, moveArrow, getFocusItem, setFocusItem}: P
                             y1={from.y}
                             x2={to.x}
                             y2={to.y}
-                            className="arrow-line"
-                            markerEnd="url(#arrowhead)"
+                            className={`arrow-line ${isSelected ? "arrow-line-selected" : ""}`}
+                            markerEnd={isSelected ? "url(#arrowhead-selected)" : "url(#arrowhead)"}
                             pointerEvents="stroke" 
                             onClick={() => setFocusItem(arrow.id)}
                         />
 
-                        {getFocusItem() === arrow.id &&
+                        {isSelected &&
                             <circle
-                            className="arrow-endpoint"
-                            cx={to.x + offsetX}
-                            cy={to.y + offsetY}
-                            r={5}
-                            fill="white"
-                            stroke="blue"
-                            onPointerDown={() => moveArrow(arrow)}
+                                className="arrow-endpoint"
+                                cx={to.x + offsetX}
+                                cy={to.y + offsetY}
+                                r={5}
+                                onPointerDown={() => moveArrow(arrow)}
                             />
                         }
                     </React.Fragment>

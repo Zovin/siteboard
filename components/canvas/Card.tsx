@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef } from "react";
-import type { Item, Point, Anchor, Arrow, InteractionMode } from "@/types/item";
+import { useRef, useState } from "react";
+import type { Item, Point, Anchor, Arrow, InteractionMode, ToolMode } from "@/types/item";
 import { getAnchorPosition } from "@/lib/snapHelper";
+import { X } from "lucide-react";
 
 type Props = {
     card: Item;
@@ -14,11 +15,13 @@ type Props = {
     getInteractionMode: () => InteractionMode;
     getFocusItem: () => number | string | null;
     setFocusItem: (id: number | string) => void;
+    toolMode: ToolMode;
 }
 
-export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode, getFocusItem, setFocusItem }: Props) {
+export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInteractionMode, getInteractionMode, getFocusItem, setFocusItem, toolMode }: Props) {
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
+    const [isHovered, setIsHovered] = useState(false);
 
     const totalMovementRef = useRef<Point>({ x: 0, y: 0 });
     const totalResizeRef = useRef({ w: 0, h: 0 });
@@ -40,6 +43,10 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
         removeCard(card.id);
     }  
 
+    const showAnchors = card.type === "iframe" && (
+        getFocusItem() === card.id || (toolMode === "arrow" && isHovered)
+    );
+
     let content;
 
     if (card.type === "input") {
@@ -55,6 +62,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
                 }}
                 onBlur={removeInputCard}
                 className="card-input"
+                placeholder="Enter URL..."
             />
         )
     } else {
@@ -174,10 +182,12 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
         updateInteractionMode("drawing-arrow");
     }
 
+    const isFocused = getFocusItem() === card.id;
+
     return (
         <div            
             ref={cardRef}
-            className={`card-div ${card.type === "iframe" ? "card-div-iframe": ""}`}
+            className={`card-div ${card.type === "iframe" ? "card-div-iframe": ""} ${isFocused ? "card-focused" : ""}`}
             style={{
                 left: card.x,
                 top: card.y,
@@ -188,9 +198,11 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             onPointerDown={movePointerDown}
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
 
-            {getFocusItem() === card.id && card.type === "iframe" && card.anchors.map(side => (
+            {showAnchors && card.anchors.map(side => (
                 <div 
                     key={side}
                     className={`anchor anchor-${side}`}
@@ -205,23 +217,27 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
                     onPointerMove={movePointerMove}
                     onPointerUp={movePointerUp}
                 >
+                    <span className="card-url-label">{card.value}</span>
                     <button
                         onClick={removeCurrentCard}
                         className="card-close-btn"
+                        aria-label="Close card"
                     >
-                        {"✕"}
+                        <X size={12} />
                     </button>
                 </div>
             )}
 
             {content}
 
-            <div
-                className="card-resize-handle"
-                onPointerDown={resizePointerDown}
-                onPointerMove={resizePointerMove}
-                onPointerUp={resizePointerUp}
-            />
+            {card.type === "iframe" && (
+                <div
+                    className="card-resize-handle"
+                    onPointerDown={resizePointerDown}
+                    onPointerMove={resizePointerMove}
+                    onPointerUp={resizePointerUp}
+                />
+            )}
         </div>
     )
 }

@@ -18,6 +18,8 @@ type CanvasBackgroundProps = {
     addCard: (worldX: number, worldY: number) => void;
     transformItems: () => void;
     setFocusItem: (id: number | string | null) => void;
+    onZoomChange: () => void;
+    drawRef: React.RefObject<(() => void) | null>;
 }
 
 export function CanvasBackground({
@@ -26,9 +28,10 @@ export function CanvasBackground({
     interactionMode,
     addCard,
     transformItems,
-    setFocusItem
-}: CanvasBackgroundProps
-) {
+    setFocusItem,
+    onZoomChange,
+    drawRef,
+}: CanvasBackgroundProps) {
 
     const spacingRef = useRef(100);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,6 +42,9 @@ export function CanvasBackground({
 
     useEffect(() => {
         draw();
+        if (drawRef) {
+            drawRef.current = draw;
+        }
     }, []);
 
     const draw = () => {
@@ -61,7 +67,7 @@ export function CanvasBackground({
 
         const spacing = spacingRef.current;
         const zoomSpacing = spacingRef.current * zoom;
-        const dotRadius = 3 * zoom;
+        const dotRadius = 1.5 * zoom;
 
         const worldFirstX = Math.ceil(worldX / spacing) * spacing;
         const worldFirstY = Math.ceil(worldY / spacing) * spacing;
@@ -69,7 +75,7 @@ export function CanvasBackground({
         const endX = canvas.width;
         const endY = canvas.height;
 
-        ctx.fillStyle = `rgba(224,224,224, ${zoom / 1.5})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.15, 0.08 * zoom)})`;
 
         for (let x = (worldFirstX - worldX) * zoom; x <= endX; x += zoomSpacing) {
             for (let y = (worldFirstY - worldY) * zoom; y <= endY; y += zoomSpacing) {
@@ -106,6 +112,7 @@ export function CanvasBackground({
 
         draw();
         transformItems();
+        onZoomChange();
     }
 
     const onDoubleClick = (e: React.PointerEvent<HTMLCanvasElement>) => {
