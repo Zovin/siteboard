@@ -45,12 +45,10 @@ export function CanvasBackground({
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
-        
+
         const size = canvas.getBoundingClientRect();
         canvas.width = Math.round(size.width);
         canvas.height = Math.round(size.height);
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const worldX = camera.current.x;
         const worldY = camera.current.y;
@@ -58,7 +56,7 @@ export function CanvasBackground({
         const zoom = zoomRef.current;
 
         const spacing = spacingRef.current;
-        const zoomSpacing = spacingRef.current * zoom;
+        const zoomSpacing = spacing * zoom;
         const dotRadius = 3 * zoom;
 
         const worldFirstX = Math.ceil(worldX / spacing) * spacing;
@@ -67,7 +65,16 @@ export function CanvasBackground({
         const endX = canvas.width;
         const endY = canvas.height;
 
-        ctx.fillStyle = `rgba(224,224,224, ${zoom / 1.5})`;
+        // --- Hardcoded background and dot colors ---
+        const backgroundColor = "hsl(240, 10%, 6%)"; // dark blue background
+        // const dotColor = "hsl(240, 5%, 20%)";        // slightly lighter dark dots
+
+        // Fill background
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw dot grid
+        ctx.fillStyle = `hsl(240, 5%, 20%, ${Math.min(zoom / 1.5, 1)})`; // optional alpha based on zoom
 
         for (let x = (worldFirstX - worldX) * zoom; x <= endX; x += zoomSpacing) {
             for (let y = (worldFirstY - worldY) * zoom; y <= endY; y += zoomSpacing) {
@@ -76,7 +83,8 @@ export function CanvasBackground({
                 ctx.fill();
             }
         }
-    }
+    };
+
 
     const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault(); // prevent scrolling down

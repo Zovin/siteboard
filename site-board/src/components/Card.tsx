@@ -190,8 +190,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             onPointerDown={movePointerDown}
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
-        >
-
+        >   
             {getFocusItem() === card.id && card.type === "iframe" && card.anchors.map(side => (
                 <div 
                     key={side}

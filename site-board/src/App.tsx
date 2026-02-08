@@ -1,13 +1,10 @@
-// import { useState } from 'react'
-import './App.css'
-import Canvas from './Canvas'
+import Canvas from "./Canvas";
+import './tailwind.css'
 
 function App() {
   return (
-    <>
-      <Canvas/>
-    </>
-  )
+    <Canvas />
+  );
 }
 
-export default App
+export default App;

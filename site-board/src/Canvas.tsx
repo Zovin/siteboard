@@ -209,7 +209,7 @@ export default function Canvas() {
 
 
   return (
-    <div className="canvas-container">
+    <div className="canvas-container muted">
         <CanvasBackground 
             camera={curPosRef}
             zoomRef={zoomRef}
