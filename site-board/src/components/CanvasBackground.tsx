@@ -39,52 +39,70 @@ export function CanvasBackground({
         draw();
     }, []);
 
+    useEffect(() => {
+        const handleResize = () => {
+            draw();            // redraw grid at new size
+            transformItems();  // keeps DOM layer aligned with camera
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+
     const draw = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-        const size = canvas.getBoundingClientRect();
-        canvas.width = Math.round(size.width);
-        canvas.height = Math.round(size.height);
+    // --- Handle DPR (THIS FIXES RESIZE WEIRDNESS) ---
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
 
-        const worldX = camera.current.x;
-        const worldY = camera.current.y;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const zoom = zoomRef.current;
+    const width = rect.width;
+    const height = rect.height;
 
-        const spacing = spacingRef.current;
-        const zoomSpacing = spacing * zoom;
-        const dotRadius = 3 * zoom;
+    const cameraX = camera.current.x;
+    const cameraY = camera.current.y;
+    const zoom = zoomRef.current;
+    const spacing = spacingRef.current;
 
-        const worldFirstX = Math.ceil(worldX / spacing) * spacing;
-        const worldFirstY = Math.ceil(worldY / spacing) * spacing;
+    // --- Clear background ---
+    ctx.fillStyle = "hsl(240 10% 6%)";
+    ctx.fillRect(0, 0, width, height);
 
-        const endX = canvas.width;
-        const endY = canvas.height;
+    // --- Visible world bounds ---
+    const worldLeft = cameraX;
+    const worldTop = cameraY;
+    const worldRight = cameraX + width / zoom;
+    const worldBottom = cameraY + height / zoom;
 
-        // --- Hardcoded background and dot colors ---
-        const backgroundColor = "hsl(240, 10%, 6%)"; // dark blue background
-        // const dotColor = "hsl(240, 5%, 20%)";        // slightly lighter dark dots
+    // --- First grid line in world space ---
+    const startX = Math.floor(worldLeft / spacing) * spacing;
+    const startY = Math.floor(worldTop / spacing) * spacing;
 
-        // Fill background
-        ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const dotRadius = Math.max(1, 4 * zoom);
 
-        // Draw dot grid
-        ctx.fillStyle = `hsl(240, 5%, 20%, ${Math.min(zoom / 1.5, 1)})`; // optional alpha based on zoom
+    ctx.fillStyle = "hsl(240 5% 20%)";
 
-        for (let x = (worldFirstX - worldX) * zoom; x <= endX; x += zoomSpacing) {
-            for (let y = (worldFirstY - worldY) * zoom; y <= endY; y += zoomSpacing) {
-                ctx.beginPath();
-                ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
-                ctx.fill();
-            }
+    for (let wx = startX; wx <= worldRight; wx += spacing) {
+        for (let wy = startY; wy <= worldBottom; wy += spacing) {
+
+        const screenX = (wx - cameraX) * zoom;
+        const screenY = (wy - cameraY) * zoom;
+
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
         }
+    }
     };
-
 
     const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
         e.preventDefault(); // prevent scrolling down

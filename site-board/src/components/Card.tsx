@@ -2,6 +2,16 @@ import { useRef } from "react";
 import type { Item, Point, Anchor, Arrow, InteractionMode } from "../types/item";
 import "./Card.css"
 import { getAnchorPosition } from "../helper/snapHelper";
+import { cn } from "../lib/utils";
+
+import {
+  X,
+  ExternalLink,
+  GripVertical,
+  Maximize2,
+//   Plus,
+//   Minus,
+} from "lucide-react"
 
 type Props = {
     card: Item;
@@ -61,11 +71,12 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             <iframe
                 src={withHttps(card.value)}
                 className="card-iframe"
+                sandbox="allow-scripts allow-same-origin allow-forms"
             />
         );
     }
 
-    const resizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const resizePointerDown = (e: React.PointerEvent<SVGElement>) => {
         e.stopPropagation();
 
         updateInteractionMode("resizing");
@@ -77,7 +88,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
 
-    const resizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const resizePointerMove = (e: React.PointerEvent<SVGElement>) => {
         if (getInteractionMode() !== "resizing" || !lastMousePositionRef.current) return;
 
         const zoom = getZoom();
@@ -112,8 +123,6 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
     const movePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
         if (getFocusItem() !== card.id) setFocusItem(card.id);
         if (getInteractionMode() === "drawing-arrow") return    // this is to prevent moving and drawing arrow at the same time
-
-        console.log("moving started");
         e.stopPropagation();
 
         updateInteractionMode("dragging-card");
@@ -175,54 +184,108 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
         });
         updateInteractionMode("drawing-arrow");
     }
-
+    
     return (
         <div            
             ref={cardRef}
-            className={`card-div ${card.type === "iframe" ? "card-div-iframe": ""}`}
+            className={cn(
+                "card-div",
+                "absolute select-none",
+                "bg-card rounded-3xl",
+                "border border-border/50",
+                "shadow-lg shadow-black/5",
+                "transition-shadow duration-200",
+                "flex flex-col h-full",
+                getFocusItem() === card.id &&
+                "ring-2 ring-blue-500/50 shadow-xl shadow-blue-500/10",
+                getInteractionMode() === "dragging-card" && "cursor-grabbing"
+            )}
             style={{
                 left: card.x,
                 top: card.y,
                 width: card.w,
                 height: card.h,
-                zIndex: card.z
+                zIndex: card.z,
             }}
             onPointerDown={movePointerDown}
             onPointerMove={movePointerMove}
             onPointerUp={movePointerUp}
-        >   
-            {getFocusItem() === card.id && card.type === "iframe" && card.anchors.map(side => (
-                <div 
-                    key={side}
-                    className={`anchor anchor-${side}`}
-                    onPointerDown={() => onAnchorClick(side)}
+        >
+            {getFocusItem() === card.id &&
+            card.anchors.map((side) => (
+                <button
+                key={side}
+                className={cn(
+                    "absolute w-5 h-5 rounded-full",
+                    "border-2 border-blue-500 bg-background",
+                    "hover:bg-blue-500 hover:scale-125",
+                    "transition-all duration-150",
+                    `anchor-${side} anchor`,
+                    "shadow-sm"
+                )}
+                onPointerDown={(e) => {
+                    e.stopPropagation()
+                    onAnchorClick(side)
+                }}
                 />
             ))}
 
-            {card.type === "iframe" && (
-                <div
-                    className="card-header"
-                    onPointerDown={movePointerDown}
-                    onPointerMove={movePointerMove}
-                    onPointerUp={movePointerUp}
-                >
-                    <button
-                        onClick={removeCurrentCard}
-                        className="card-close-btn"
+            <div className="w-full h-full overflow-hidden rounded-3xl">
+                {card.type === "iframe" && (
+                    <div
+                        className={cn(
+                        "h-14 px-3 flex items-center gap-2",
+                        "bg-muted border-b border-border/50",
+                        "all-scroll active:all-scroll"
+                        )}
+                        onPointerDown={movePointerDown}
+                        onPointerMove={movePointerMove}
+                        onPointerUp={movePointerUp}
                     >
-                        ✕
-                    </button>
+                        <GripVertical className="w-7.5 h-7.5 text-muted-foreground/50" />
+
+                        <span className="flex-1 text-xl font-medium text-foreground/80 truncate">
+                        {new URL(withHttps(card.value)).hostname}
+                        </span>
+
+                        <div className="flex items-center gap-1">
+                        <button
+                            onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(withHttps(card.value), "_blank")
+                            }}
+                            className="p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground transition-color hover:cursor-pointer"
+                            title="Open in new tab"
+                        >
+                            <ExternalLink className="w-7.5 h-7.5" />
+                        </button>
+
+                        <button
+                            onClick={(e) => {
+                            e.stopPropagation()
+                            removeCurrentCard()
+                            }}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors hover:cursor-pointer"
+                            title="Delete"
+                        >
+                            <X className="w-7.5 h-7.5" />
+                        </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {content} {/* iframe goes here */}
+
+                <div className="resize-handle absolute bottom-2 right-2 w-7.5 h-7.5 cursor-se-resize flex items-center justify-center">
+                    <Maximize2 className="w-7.5 h-7.5 text-muted-foreground rotate-90"
+                        onPointerDown={resizePointerDown}
+                        onPointerMove={resizePointerMove}
+                        onPointerUp={resizePointerUp}
+                    />
                 </div>
-            )}
-
-            {content}
-
-            <div
-                className="card-resize-handle"
-                onPointerDown={resizePointerDown}
-                onPointerMove={resizePointerMove}
-                onPointerUp={resizePointerUp}
-            />
+            </div>
         </div>
     )
+
 }

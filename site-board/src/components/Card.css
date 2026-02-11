@@ -14,23 +14,17 @@
     height: 100%;
     border: none;
     outline: none;
-    box-sizing: border-box;
 }
 
 .anchor {
-    position: absolute;
-    width: 7px;
-    height: 7px;
-    background: white;
-    border: 1px solid blue;
-    border-radius: 50%;
-    cursor: pointer
+    z-index: 100;
+    
 }
 
-.anchor-top { top: -18px; left: 50%; transform: translateX(-50%);}
-.anchor-bottom { bottom: -15px; left: 50%; transform: translateX(-50%);}
-.anchor-left { top: 50%; left: -15px; transform: translateY(-50%);}
-.anchor-right { top: 50%; right: -15px; transform: translateY(-50%);}
+.anchor-top { top: -30px; left: 50%; transform: translateX(-50%);}
+.anchor-bottom { bottom: -30px; left: 50%; transform: translateX(-50%);}
+.anchor-left { top: 50%; left: -30px; transform: translateY(-50%);}
+.anchor-right { top: 50%; right: -30px; transform: translateY(-50%);}
 
 .card-div {
   position: absolute;
@@ -40,24 +34,13 @@
   pointer-events: auto;
 }
 
-.card-div-iframe {
-  border: 5px solid gray;
-  background: #fff;
-}
-
 .card-header {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 14px;
-    background: gray;
     cursor: all-scroll;
     z-index: 2;
-
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
 }
 
 .card-close-btn {
