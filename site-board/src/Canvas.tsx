@@ -21,7 +21,7 @@ export default function Canvas() {
         return focusedItemId;
     }
     const setFocusItem = (id: number | string | null) => {
-        console.log("set to" + id)
+        console.log("set to " + id)
         setFocusedItemId(id);
     }
 
@@ -205,6 +205,7 @@ export default function Canvas() {
             };
             updateCard(updatedFromItem);
         }
+        arrowIdRef.current = null;
     }
 
 
@@ -226,6 +227,7 @@ export default function Canvas() {
                 moveArrow={moveArrow} 
                 getFocusItem={getCurrentFocusItem}
                 setFocusItem={setFocusItem}
+                removeArrow={removeArrow}
             />
         </div>
 

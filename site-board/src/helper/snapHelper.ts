@@ -31,3 +31,43 @@ export const findSnapTarget = (worldX: number, worldY: number, items: Item[]): A
     }
     return null;
 }
+
+export const getControlOffset = (anchor: string | null, distance: number) => {
+    if (!anchor) return { x: 0, y: 0 };
+
+    switch (anchor) {
+        case "top":
+            return { x: 0, y: -distance };
+        case "right":
+            return { x: distance, y: 0 };
+        case "bottom":
+            return { x: 0, y: distance };
+        case "left":
+            return { x: -distance, y: 0 };
+        default:
+            return { x: 0, y: 0 };
+}
+};
+
+export const getBezierPoint = (
+  t: number,
+  p0: { x: number; y: number },
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number }
+) => {
+  const mt = 1 - t;
+
+  return {
+    x:
+      mt * mt * mt * p0.x +
+      3 * mt * mt * t * p1.x +
+      3 * mt * t * t * p2.x +
+      t * t * t * p3.x,
+    y:
+      mt * mt * mt * p0.y +
+      3 * mt * mt * t * p1.y +
+      3 * mt * t * t * p2.y +
+      t * t * t * p3.y,
+  };
+};

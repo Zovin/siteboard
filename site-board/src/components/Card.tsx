@@ -29,7 +29,7 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
     const lastMousePositionRef = useRef<Point>({ x: 0, y: 0 });
     const cardRef = useRef<HTMLDivElement>(null);
 
-    const totalMovementRef = useRef<Point>({ x: 0, y: 0 });
+    const positionRef = useRef({ x: card.x, y: card.y });
     const totalResizeRef = useRef({ w: 0, h: 0 });
 
     const withHttps = (url: string) => {
@@ -131,13 +131,13 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
             x: e.clientX,
             y: e.clientY,
         };
+        positionRef.current = {x: card.x, y: card.y};
 
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
 
     const movePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (getInteractionMode() !== "dragging-card" || !lastMousePositionRef.current || !totalMovementRef.current) return
-
+        if (getInteractionMode() !== "dragging-card" || !lastMousePositionRef.current) return
 
         const zoom = getZoom();
 
@@ -145,27 +145,17 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
         const dy = (e.clientY - lastMousePositionRef.current.y) / zoom;
 
         lastMousePositionRef.current = { x: e.clientX, y: e.clientY };
-        
-        totalMovementRef.current.x += dx;
-        totalMovementRef.current.y += dy;
+        positionRef.current.x += dx;
+        positionRef.current.y += dy;
 
-        const cardDiv = cardRef.current!;
-        cardDiv.style.transform =
-            `translate(${totalMovementRef.current.x}px, ${totalMovementRef.current.y}px)`;
+        onUpdate({ ...card, x: positionRef.current.x, y: positionRef.current.y });
     }
 
     const movePointerUp = () => {
-        if (getInteractionMode() !== "dragging-card" || !totalMovementRef.current) return
+        if (getInteractionMode() !== "dragging-card") return
 
         updateInteractionMode("idle");
-
-        const dx = totalMovementRef.current.x;
-        const dy = totalMovementRef.current.y;
-
-        const cardDiv = cardRef.current!;
-        onUpdate({ ...card, x: card.x + dx, y: card.y + dy });
-        cardDiv.style.transform = "translate(0px, 0px)";
-        totalMovementRef.current = { x: 0, y: 0};
+        positionRef.current = {x: card.x, y: card.y};
     }
 
     const onAnchorClick = (side: Anchor) => {

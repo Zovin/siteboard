@@ -23,3 +23,30 @@
     stroke-width: 5;
     marker-end: url(#arrowhead);
 }
+
+.arrow-path {
+  stroke: hsl(215 16% 65%);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 12 12;
+  animation: flowAnimation 1.5s linear infinite;
+  transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+.arrow-path.selected {
+  stroke: hsl(217 91% 60%);
+  stroke-width: 2.5;
+}
+
+@keyframes flowAnimation {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.arrow-group {
+  pointer-events: auto;
+}
