@@ -164,7 +164,7 @@ export default function Canvas() {
         setItems([...items, {
             x: worldX,
             y: worldY,
-            w: 200,
+            w: 300,
             h: 40,
             z: z.current,
             id: cardIdCounter.current,

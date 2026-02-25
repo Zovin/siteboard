@@ -54,18 +54,26 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
     if (card.type === "input") {
         content = (
             <input
-                autoFocus
-                value={card.value}
-                onChange={(e) => onUpdate({...card, value: e.target.value})}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter" && card.value != "") {
-                        onUpdate({...card, type: "iframe", w: 800, h: 600});
-                    }
-                }}
-                onBlur={removeInputCard}
-                className="card-input"
+            autoFocus
+            value={card.value}
+            onChange={(e) => onUpdate({ ...card, value: e.target.value })}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" && card.value !== "") {
+                onUpdate({ ...card, type: "iframe", w: 800, h: 600 });
+                }
+            }}
+            onBlur={removeInputCard}
+            placeholder="Paste a URL and press Enter..."
+            className="
+                w-full h-full
+                bg-transparent
+                outline-none
+                text-center
+                text-xl
+                placeholder:text-muted-foreground
+            "
             />
-        )
+        );
     } else {
         content = (
             <iframe
@@ -186,6 +194,10 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
                 "shadow-lg shadow-black/5",
                 "transition-shadow duration-200",
                 "flex flex-col h-full",
+                card.type === "input"
+                ? "bg-transparent border-2 border-dashed border-border shadow-none"
+                : "bg-card border border-border/50 shadow-lg shadow-black/5",
+
                 getFocusItem() === card.id &&
                 "ring-2 ring-blue-500/50 shadow-xl shadow-blue-500/10",
                 getInteractionMode() === "dragging-card" && "cursor-grabbing"
@@ -267,13 +279,14 @@ export function Card({ card, onUpdate, getZoom, removeCard, addArrow, updateInte
 
                 {content} {/* iframe goes here */}
 
-                <div className="resize-handle absolute bottom-2 right-2 w-7.5 h-7.5 cursor-se-resize flex items-center justify-center">
-                    <Maximize2 className="w-7.5 h-7.5 text-muted-foreground rotate-90"
-                        onPointerDown={resizePointerDown}
-                        onPointerMove={resizePointerMove}
-                        onPointerUp={resizePointerUp}
-                    />
-                </div>
+                {card.type === "iframe" && <div 
+                    className="resize-handle absolute bottom-2 right-2 w-7.5 h-7.5 cursor-se-resize flex items-center justify-center">
+                        <Maximize2 className="w-7.5 h-7.5 text-muted-foreground rotate-90"
+                            onPointerDown={resizePointerDown}
+                            onPointerMove={resizePointerMove}
+                            onPointerUp={resizePointerUp}
+                        />
+                </div>}
             </div>
         </div>
     )
