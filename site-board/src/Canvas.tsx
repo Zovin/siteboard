@@ -5,6 +5,7 @@ import { Arrows } from "./components/Arrows";
 import './Canvas.css'
 import { findSnapTarget } from "./helper/snapHelper";
 import { CanvasBackground } from "./components/CanvasBackground";
+import Toolbar from "./components/Toolbar";
 
 export default function Canvas() {
     const curPosRef = useRef<Point>({x: 0, y: 0});
@@ -13,6 +14,7 @@ export default function Canvas() {
     const getZoom = () => {
         return zoomRef.current;
     }
+    const [zoom, setZoom] = useState(1);
     
     const arrowIdRef = useRef<null | string>(null);
 
@@ -48,6 +50,12 @@ export default function Canvas() {
     const arrowsLayerRef = useRef<HTMLDivElement>(null);
 
     const cardIdCounter = useRef<number>(Number(localStorage.getItem("idCount") ?? 0));
+
+    const canvasAPIRef = useRef<{
+        zoomIn: () => void;
+        zoomOut: () => void;
+        resetView: () => void;
+    } | null>(null);
 
     const transformItems = () => {
         const itemsLayer = itemsLayerRef.current;
@@ -218,6 +226,15 @@ export default function Canvas() {
             addCard={addInputCard}
             transformItems={transformItems}
             setFocusItem={setFocusItem}
+            apiRef={canvasAPIRef}
+            onZoomChange={setZoom}
+        />
+
+        <Toolbar
+            zoom={zoom}
+            onZoomIn={() => canvasAPIRef.current?.zoomIn()}
+            onZoomOut={() => canvasAPIRef.current?.zoomOut()}
+            onResetView={() => canvasAPIRef.current?.resetView()}
         />
 
         <div ref={arrowsLayerRef} className="arrows-layer">

@@ -16,6 +16,12 @@ type CanvasBackgroundProps = {
     addCard: (worldX: number, worldY: number) => void;
     transformItems: () => void;
     setFocusItem: (id: number | string | null) => void;
+    apiRef: React.RefObject<{
+        zoomIn: () => void;
+        zoomOut: () => void;
+        resetView: () => void;
+    } | null>;
+    onZoomChange?: (zoom: number) => void;
 }
 
 export function CanvasBackground({
@@ -24,7 +30,9 @@ export function CanvasBackground({
     interactionMode,
     addCard,
     transformItems,
-    setFocusItem
+    setFocusItem,
+    apiRef,
+    onZoomChange
 }: CanvasBackgroundProps
 ) {
 
@@ -51,91 +59,132 @@ export function CanvasBackground({
 
 
     const draw = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // --- Handle DPR (THIS FIXES RESIZE WEIRDNESS) ---
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const width = rect.width;
-    const height = rect.height;
-
-    const cameraX = camera.current.x;
-    const cameraY = camera.current.y;
-    const zoom = zoomRef.current;
-    const spacing = spacingRef.current;
-
-    // --- Clear background ---
-    ctx.fillStyle = "hsl(240 10% 6%)";
-    ctx.fillRect(0, 0, width, height);
-
-    // --- Visible world bounds ---
-    const worldLeft = cameraX;
-    const worldTop = cameraY;
-    const worldRight = cameraX + width / zoom;
-    const worldBottom = cameraY + height / zoom;
-
-    // --- First grid line in world space ---
-    const startX = Math.floor(worldLeft / spacing) * spacing;
-    const startY = Math.floor(worldTop / spacing) * spacing;
-
-    const dotRadius = Math.max(1, 4 * zoom);
-
-    ctx.fillStyle = "hsl(240 5% 20%)";
-
-    for (let wx = startX; wx <= worldRight; wx += spacing) {
-        for (let wy = startY; wy <= worldBottom; wy += spacing) {
-
-        const screenX = (wx - cameraX) * zoom;
-        const screenY = (wy - cameraY) * zoom;
-
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
-        }
-    }
-    };
-
-    const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-        e.preventDefault(); // prevent scrolling down
-
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const canvasLocation = canvas.getBoundingClientRect();
-        // current location of the mouse relative to the screen
-        const mouseX = e.clientX - canvasLocation.left;
-        const mouseY = e.clientY - canvasLocation.top;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
 
+        // --- Handle DPR (THIS FIXES RESIZE WEIRDNESS) ---
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const width = rect.width;
+        const height = rect.height;
+
+        const cameraX = camera.current.x;
+        const cameraY = camera.current.y;
+        const zoom = zoomRef.current;
+        const spacing = spacingRef.current;
+
+        // --- Clear background ---
+        ctx.fillStyle = "hsl(240 10% 6%)";
+        ctx.fillRect(0, 0, width, height);
+
+        // --- Visible world bounds ---
+        const worldLeft = cameraX;
+        const worldTop = cameraY;
+        const worldRight = cameraX + width / zoom;
+        const worldBottom = cameraY + height / zoom;
+
+        // --- First grid line in world space ---
+        const startX = Math.floor(worldLeft / spacing) * spacing;
+        const startY = Math.floor(worldTop / spacing) * spacing;
+
+        const dotRadius = Math.max(1, 4 * zoom);
+
+        ctx.fillStyle = "hsl(240 5% 20%)";
+
+        for (let wx = startX; wx <= worldRight; wx += spacing) {
+            for (let wy = startY; wy <= worldBottom; wy += spacing) {
+
+            const screenX = (wx - cameraX) * zoom;
+            const screenY = (wy - cameraY) * zoom;
+
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+            }
+        }
+    };
+
+    const zoomAtScreenPoint = (
+        screenX: number,
+        screenY: number,
+        zoomFactor: number
+    ) => {
         const oldZoom = zoomRef.current;
 
-        const worldMouseX = camera.current.x + mouseX / oldZoom;
-        const worldMouseY = camera.current.y + mouseY / oldZoom;
+        const worldMouseX = camera.current.x + screenX / oldZoom;
+        const worldMouseY = camera.current.y + screenY / oldZoom;
 
-        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;    // zoom in or zoom out by 10% every time, not a flat number
         let newZoom = oldZoom * zoomFactor;
-        newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom)); // limit the zoom to either minZoom or maxZoom
+        newZoom = Math.min(maxZoom, Math.max(minZoom, newZoom));
 
         // when zooming, we want the mouseX and mouseY value to still be the same, so we change the camera location instead.
         // (if the camera zooms in, we want to move the camera's world x postion to be closer to the mouse pointer and vice versa)
         // currently CameraX = worldMouseX - mouseX/oldZoom(this gives the real distance of the mouse to left corner), 
         // so to get the cameraX with new zoom, we do
         // CameraX = worldMouseX - mouseX/newZoom
-        camera.current.x = worldMouseX - mouseX / newZoom;
-        camera.current.y = worldMouseY - mouseY / newZoom;
+
+        camera.current.x = worldMouseX - screenX / newZoom;
+        camera.current.y = worldMouseY - screenY / newZoom;
 
         zoomRef.current = newZoom;
+        onZoomChange?.(newZoom);
 
         draw();
         transformItems();
+    };
+
+    const zoomFromCenter = (zoomFactor: number) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        zoomAtScreenPoint(centerX, centerY, zoomFactor);
+    };
+
+    const resetView = () => {
+        camera.current = { x: 0, y: 0 };
+        zoomRef.current = 1;
+        draw();
+        transformItems();
+        onZoomChange?.(1);
+    };
+
+    useEffect(() => {
+        if (apiRef) {
+            apiRef.current = {
+                zoomIn: () => zoomFromCenter(1.1),
+                zoomOut: () => zoomFromCenter(0.9),
+                resetView,
+            };
+        }
+    }, [apiRef]);
+
+    const onWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const rect = canvas.getBoundingClientRect();
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+
+        zoomAtScreenPoint(mouseX, mouseY, zoomFactor);
     }
 
     const onDoubleClick = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -197,7 +246,7 @@ export function CanvasBackground({
             onWheel={onWheel}
             onDoubleClick={onDoubleClick}
         />
-    )
+    );
 
 }
     
