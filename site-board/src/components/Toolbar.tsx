@@ -1,17 +1,19 @@
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react"
+import { ZoomIn, ZoomOut, RotateCcw, HelpCircle  } from "lucide-react"
 
 interface ZoomToolbarProps {
   zoom: number
   onZoomIn: () => void
   onZoomOut: () => void
   onResetView: () => void
+  onOpenHelp: () => void
 }
 
 export default function Toolbar({
     zoom,
     onZoomIn,
     onZoomOut,
-    onResetView
+    onResetView,
+    onOpenHelp
 }: ZoomToolbarProps) {
     return (
         <div className="absolute bottom-4 right-4 z-50 flex items-center gap-1 p-1.5 bg-card/95 backdrop-blur-sm border border-border/50 rounded-xl shadow-lg">
@@ -36,6 +38,12 @@ export default function Toolbar({
             icon={RotateCcw}
             label="Reset View"
             onClick={onResetView}
+        />
+
+        <ToolButton
+            icon={HelpCircle}
+            label="Help"
+            onClick={onOpenHelp}
         />
         </div>
     )

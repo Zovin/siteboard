@@ -6,6 +6,7 @@ import './Canvas.css'
 import { findSnapTarget } from "./helper/snapHelper";
 import { CanvasBackground } from "./components/CanvasBackground";
 import Toolbar from "./components/Toolbar";
+import { HelpModal } from "./components/HelpModal";
 
 export default function Canvas() {
     const curPosRef = useRef<Point>({x: 0, y: 0});
@@ -50,6 +51,8 @@ export default function Canvas() {
     const arrowsLayerRef = useRef<HTMLDivElement>(null);
 
     const cardIdCounter = useRef<number>(Number(localStorage.getItem("idCount") ?? 0));
+
+    const [helpOpen, setHelpOpen] = useState(false);
 
     const canvasAPIRef = useRef<{
         zoomIn: () => void;
@@ -235,6 +238,7 @@ export default function Canvas() {
             onZoomIn={() => canvasAPIRef.current?.zoomIn()}
             onZoomOut={() => canvasAPIRef.current?.zoomOut()}
             onResetView={() => canvasAPIRef.current?.resetView()}
+            onOpenHelp={() => setHelpOpen(true)}
         />
 
         <div ref={arrowsLayerRef} className="arrows-layer">
@@ -264,6 +268,11 @@ export default function Canvas() {
                 />
             ))}
         </div>
+
+        <HelpModal
+            open={helpOpen}
+            onClose={() => setHelpOpen(false)}
+        />
     </div>
   );
 }
